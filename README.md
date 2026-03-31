@@ -2,6 +2,8 @@
 
 A cute, festive Flappy Bird game built as a single-page application with HTML5 Canvas and TypeScript, styled like a chubby bird soaring through a magical kingdom.
 
+![flappy](./assets/flappy.png)
+
 ## ✨ Features
 
 - **Story Mode** — 20 levels with increasing difficulty, 30 seconds each
