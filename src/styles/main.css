@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@theme {
+  --color-game-bg: #2D3436;
+  --color-game-accent: #6C5CE7;
+  --color-game-text: #FEFEFE;
+  --color-game-overlay: rgba(45, 52, 54, 0.85);
+  --font-game: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  background-color: var(--color-game-bg);
+  font-family: var(--font-game);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#app {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+canvas#game-canvas {
+  display: block;
+  image-rendering: auto;
+  max-width: 100vw;
+  max-height: 100dvh;
+}
+
+#ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#ui-overlay > * {
+  pointer-events: auto;
+}
+
+.btn-game {
+  padding: 0.75rem 2rem;
+  border-radius: 1rem;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: var(--font-game);
+}
+
+.btn-game:hover {
+  transform: scale(1.05);
+}
+
+.btn-game:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+  color: #FEFEFE;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #636e72, #b2bec3);
+  color: #FEFEFE;
+  box-shadow: 0 4px 15px rgba(99, 110, 114, 0.3);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #00B894, #55E6C1);
+  color: #FEFEFE;
+  box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #FDCB6E, #F8A500);
+  color: #2D3436;
+  box-shadow: 0 4px 15px rgba(253, 203, 110, 0.4);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #E17055, #FF7675);
+  color: #FEFEFE;
+  box-shadow: 0 4px 15px rgba(225, 112, 85, 0.4);
+}
+
+.panel {
+  background: var(--color-game-overlay);
+  backdrop-filter: blur(10px);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-game-text);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
