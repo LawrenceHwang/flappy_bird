@@ -31,6 +31,19 @@ interface Sparkle {
   opacity: number;
   phase: number;
   speed: number;
+  vx: number;
+  vy: number;
+}
+
+// ---- Light mote definition -----------------------------------------------
+
+interface Mote {
+  x: number;
+  y: number;
+  size: number;
+  opacity: number;
+  vy: number;
+  colorIndex: number;
 }
 
 /** Number of clouds that loop across the sky. */
@@ -42,6 +55,19 @@ const HILL_COUNT = 7;
 const GRASS_HEIGHT = 8;
 /** Floating magic sparkles in the sky. */
 const SPARKLE_COUNT = 14;
+/** Tiny floating light particles. */
+const MOTE_COUNT = 20;
+/** Number of grass blades across the ground. */
+const GRASS_BLADE_COUNT = 35;
+
+/** Number of bezier control points per aurora ribbon. */
+const AURORA_SEGMENTS = 40;
+/** Minimum grass blade height in pixels. */
+const BLADE_MIN_HEIGHT = 3;
+/** Range of grass blade height variation in pixels. */
+const BLADE_HEIGHT_RANGE = 6;
+/** Vertical margin above the ground for sparkle wrapping. */
+const SKY_BOTTOM_MARGIN = 20;
 
 /**
  * Parallax scrolling background — magical kingdom style.
@@ -58,6 +84,7 @@ export class Background {
   private clouds: CloudShape[] = [];
   private hills: HillShape[] = [];
   private sparkles: Sparkle[] = [];
+  private motes: Mote[] = [];
   private cloudOffset: number = 0;
   private hillOffset: number = 0;
   private groundOffset: number = 0;
@@ -67,6 +94,7 @@ export class Background {
     this.initClouds();
     this.initHills();
     this.initSparkles();
+    this.initMotes();
   }
 
   /**
@@ -80,6 +108,26 @@ export class Background {
     this.hillOffset += baseShift * 0.4;
     this.groundOffset += baseShift;
     this.time += dt;
+
+    // Drift sparkles
+    const skyMaxY = GAME_HEIGHT - GROUND_HEIGHT - SKY_BOTTOM_MARGIN;
+    for (const sp of this.sparkles) {
+      sp.x += sp.vx * dt * 60;
+      sp.y += sp.vy * dt * 60;
+      if (sp.x < 0) sp.x += GAME_WIDTH;
+      if (sp.x > GAME_WIDTH) sp.x -= GAME_WIDTH;
+      if (sp.y < 10) sp.y = skyMaxY;
+      if (sp.y > skyMaxY) sp.y = 10;
+    }
+
+    // Drift motes upward
+    for (const m of this.motes) {
+      m.y += m.vy * dt * 60;
+      if (m.y < -5) {
+        m.y = GAME_HEIGHT - GROUND_HEIGHT;
+        m.x = Math.random() * GAME_WIDTH;
+      }
+    }
   }
 
   /**
@@ -97,6 +145,7 @@ export class Background {
     this.renderAurora(ctx);
     this.renderClouds(ctx);
     this.renderSparkles(ctx);
+    this.renderMotes(ctx);
     this.renderHills(ctx);
     this.renderGround(ctx);
   }
@@ -123,28 +172,113 @@ export class Background {
     grad.addColorStop(1, bottom);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Subtle pulsing radial shimmer — gives the sky a breathing quality
+    const shimmerAlpha = 0.05 + Math.sin(this.time * 0.6) * 0.03;
+    const cx = GAME_WIDTH * 0.4;
+    const cy = GAME_HEIGHT * 0.3;
+    const shimmer = ctx.createRadialGradient(cx, cy, 0, cx, cy, GAME_WIDTH * 0.55);
+    shimmer.addColorStop(0, `rgba(255, 230, 200, ${shimmerAlpha})`);
+    shimmer.addColorStop(0.6, `rgba(200, 180, 255, ${shimmerAlpha * 0.5})`);
+    shimmer.addColorStop(1, 'rgba(200, 180, 255, 0)');
+    ctx.fillStyle = shimmer;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   }
 
   // ---- Aurora bands ---------------------------------------------------
 
   private renderAurora(ctx: CanvasRenderingContext2D): void {
     const t = this.time * 0.28;
-    const bands = [
-      { y: GAME_HEIGHT * 0.18, color: COLORS.magic.aurora1, amp: 22, freq: 0.9 },
-      { y: GAME_HEIGHT * 0.34, color: COLORS.magic.aurora2, amp: 16, freq: 1.3 },
-      { y: GAME_HEIGHT * 0.48, color: COLORS.magic.aurora3, amp: 12, freq: 1.7 },
+    const ribbons: Array<{
+      baseY: number;
+      color: string;
+      alpha: number;
+      width: number;
+      freqs: number[];
+      amps: number[];
+    }> = [
+      {
+        baseY: GAME_HEIGHT * 0.18,
+        color: COLORS.magic.aurora1,
+        alpha: 0.28,
+        width: 18,
+        freqs: [0.9, 1.6, 2.8],
+        amps: [22, 10, 5],
+      },
+      {
+        baseY: GAME_HEIGHT * 0.34,
+        color: COLORS.magic.aurora2,
+        alpha: 0.24,
+        width: 14,
+        freqs: [1.3, 2.1, 3.2],
+        amps: [16, 8, 4],
+      },
+      {
+        baseY: GAME_HEIGHT * 0.48,
+        color: COLORS.magic.aurora3,
+        alpha: 0.22,
+        width: 12,
+        freqs: [1.7, 2.6, 3.9],
+        amps: [12, 7, 3],
+      },
     ];
 
-    for (const band of bands) {
+    const steps = AURORA_SEGMENTS;
+    const segW = GAME_WIDTH / steps;
+
+    for (const ribbon of ribbons) {
+      // Compute y-offsets at each control point along the width
+      const points: Array<{ x: number; y: number }> = [];
+      for (let i = 0; i <= steps; i++) {
+        const frac = i / steps;
+        let yOff = 0;
+        for (let f = 0; f < ribbon.freqs.length; f++) {
+          yOff += Math.sin(t * ribbon.freqs[f] + frac * Math.PI * 2 * (f + 1) * 0.6) * ribbon.amps[f];
+        }
+        points.push({ x: i * segW, y: ribbon.baseY + yOff });
+      }
+
       ctx.save();
-      ctx.globalAlpha = 0.9;
-      const yOff = Math.sin(t * band.freq) * band.amp;
-      const grad = ctx.createLinearGradient(0, band.y + yOff - 20, 0, band.y + yOff + 20);
+      ctx.globalAlpha = ribbon.alpha;
+
+      // Draw filled ribbon shape: top edge then bottom edge in reverse
+      const grad = ctx.createLinearGradient(0, ribbon.baseY - 30, 0, ribbon.baseY + 30);
       grad.addColorStop(0, 'transparent');
-      grad.addColorStop(0.5, band.color);
+      grad.addColorStop(0.3, ribbon.color);
+      grad.addColorStop(0.7, ribbon.color);
       grad.addColorStop(1, 'transparent');
       ctx.fillStyle = grad;
-      ctx.fillRect(0, band.y + yOff - 20, GAME_WIDTH, 40);
+
+      ctx.beginPath();
+      // Top edge — smooth bezier through points offset upward
+      ctx.moveTo(points[0].x, points[0].y - ribbon.width / 2);
+      for (let i = 0; i < points.length - 1; i++) {
+        const cpx = (points[i].x + points[i + 1].x) / 2;
+        const cpy = (points[i].y + points[i + 1].y) / 2 - ribbon.width / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y - ribbon.width / 2, cpx, cpy);
+      }
+      // Bottom edge — reverse, offset downward
+      for (let i = points.length - 1; i > 0; i--) {
+        const cpx = (points[i].x + points[i - 1].x) / 2;
+        const cpy = (points[i].y + points[i - 1].y) / 2 + ribbon.width / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y + ribbon.width / 2, cpx, cpy);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Bright center line for extra glow
+      ctx.globalAlpha = ribbon.alpha * 0.6;
+      ctx.strokeStyle = ribbon.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 0; i < points.length - 1; i++) {
+        const cpx = (points[i].x + points[i + 1].x) / 2;
+        const cpy = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, cpx, cpy);
+      }
+      ctx.stroke();
+
       ctx.restore();
     }
   }
@@ -231,6 +365,22 @@ export class Background {
         opacity: 0.3 + Math.random() * 0.6,
         phase: Math.random() * Math.PI * 2,
         speed: 0.4 + Math.random() * 0.8,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.3,
+      });
+    }
+  }
+
+  private initMotes(): void {
+    this.motes = [];
+    for (let i = 0; i < MOTE_COUNT; i++) {
+      this.motes.push({
+        x: Math.random() * GAME_WIDTH,
+        y: Math.random() * (GAME_HEIGHT - GROUND_HEIGHT),
+        size: 1 + Math.random(),
+        opacity: 0.15 + Math.random() * 0.35,
+        vy: -(0.15 + Math.random() * 0.35),
+        colorIndex: Math.floor(Math.random() * COLORS.particles.magic.length),
       });
     }
   }
@@ -269,6 +419,36 @@ export class Background {
       ctx.fillStyle = glow;
       ctx.beginPath();
       ctx.arc(0, 0, s * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  // ---- Light motes ----------------------------------------------------
+
+  private renderMotes(ctx: CanvasRenderingContext2D): void {
+    const t = this.time;
+    for (const m of this.motes) {
+      const pulse = (Math.sin(t * 1.5 + m.x * 0.02) * 0.5 + 0.5) * m.opacity;
+      if (pulse < 0.03) continue;
+
+      ctx.save();
+      ctx.globalAlpha = pulse;
+
+      // Tiny glow halo
+      const glow = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.size * 3);
+      glow.addColorStop(0, COLORS.particles.magic[m.colorIndex]);
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.size * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bright core
+      ctx.fillStyle = COLORS.particles.magic[m.colorIndex];
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -397,5 +577,27 @@ export class Background {
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.fillRect(0, groundY, GAME_WIDTH, 2);
     ctx.restore();
+
+    // Animated grass blades swaying in the wind
+    const bladeSpacing = GAME_WIDTH / GRASS_BLADE_COUNT;
+    const bladeColors = [COLORS.ground.grass, COLORS.ground.grassLight, COLORS.ground.grassDark];
+    for (let i = 0; i < GRASS_BLADE_COUNT; i++) {
+      const bx = i * bladeSpacing + bladeSpacing * 0.5;
+      // Deterministic height variation using modular arithmetic
+      const bladeH = BLADE_MIN_HEIGHT + (i * 7 + 11) % BLADE_HEIGHT_RANGE;
+      const sway = Math.sin(this.time * 2.0 + bx * 0.05) * 2.5;
+      const colorIdx = i % bladeColors.length;
+
+      ctx.save();
+      ctx.fillStyle = bladeColors[colorIdx];
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(bx - 1.5, groundY);
+      ctx.lineTo(bx + sway, groundY - bladeH);
+      ctx.lineTo(bx + 1.5, groundY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
   }
 }
