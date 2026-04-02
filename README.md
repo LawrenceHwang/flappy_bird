@@ -11,6 +11,7 @@ A cute, festive Flappy Bird game built as a single-page application with HTML5 C
 - **Power-ups** (Infinite Mode) — Multiplier, shield, slow motion, and shrink rewards with pre-run explanations
 - **Bee Skin** — Switch between the default bird and a bee variant directly from the start screen; the selection persists between sessions
 - **Magical Kingdom Visuals** — Chubby crowned bird, enchanted pipes, aurora skies, sparkles, and layered parallax scenery
+- **Editorial Menu Art** — Golden-ratio menu composition, refined glass panels, stronger hierarchy, and a more storybook-dusk presentation across the main menu and difficulty select flow
 - **Procedural Audio** — All sound effects and background music synthesized via Web Audio API
 - **Responsive** — Scales to the browser's visible area while maintaining aspect ratio
 - **Touch Support** — Tap to flap on mobile devices
@@ -20,7 +21,7 @@ A cute, festive Flappy Bird game built as a single-page application with HTML5 C
 ## 🎮 Controls
 
 | Action | Desktop | Mobile |
-|--------|---------|--------|
+| ------ | ------- | ------ |
 | Navigate menus | `Arrow keys` / `Tab` | — |
 | Select highlighted option | `Space` / `Enter` / Click | Tap |
 | Start a run | `Space` / `Enter` / Click → 3-2-1 countdown | Tap → 3-2-1 countdown |
@@ -74,7 +75,7 @@ npm run build
 
 ## 🏗️ Architecture
 
-```
+```text
 src/
 ├── engine/          # Game loop, input, physics, renderer, orchestrator
 ├── entities/        # Bird, pipes, background, particles, rewards

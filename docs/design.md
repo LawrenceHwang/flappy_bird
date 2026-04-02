@@ -73,6 +73,7 @@ The physics are intentionally readable but less floaty than before.
 - Rounded, soft geometry with a chubby-bird silhouette
 - Bright but accessible palette with stronger highlights, outlines, and glow accents
 - Magical-kingdom parallax background with aurora bands, clouds, sparkles, hills, and ground
+- Menu scenes use a golden-ratio composition, asymmetrical focal art, and frosted-glass UI panels so the navigation flow reads as a deliberate visual hierarchy instead of a flat grid of widgets
 - Enchanted pipe styling with rune marks, ornate caps, and subtle gap glow
 - Particle effects for flap, reward pickup, and death
 
@@ -93,7 +94,7 @@ Audio uses the Web Audio API only.
 - `Renderer.ts` manages logical and physical canvas sizing
 - `InputManager.ts` normalizes keyboard and touch input
 
-### Gameplay
+### Play Systems
 
 - `Bird.ts`, `Pipe.ts`, `PipeManager.ts`, `Reward.ts`, `RewardManager.ts`, and `Background.ts` handle simulation and rendering
 - `GameScene.ts` owns active gameplay state
