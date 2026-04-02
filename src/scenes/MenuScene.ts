@@ -100,33 +100,40 @@ const MENU_BIRD_SCALE = 1.95;
 function createMenuLayout(): MenuLayout {
   /* Centered composition: bird on left, action panel on right */
   const panelW = 340;
-  const panelH = 272;
+  const panelH = 280;
   const birdAreaW = 160;
   const gap = 28;
   const totalW = birdAreaW + gap + panelW; // 528
   const startX = Math.round((GAME_WIDTH - totalW) / 2); // 136
 
+  /* Vertical centering: content zone between header and ground */
+  const contentTop = 88;
+  const contentBottom = GAME_HEIGHT - GROUND_HEIGHT - 8; // 392
+  const contentCenterY = Math.round((contentTop + contentBottom) / 2); // 240
+
   const birdCenter = {
     x: Math.round(startX + birdAreaW / 2),
-    y: 226,
+    y: contentCenterY - 8, // slightly above center for visual weight
   };
   const actionPanel = {
     x: startX + birdAreaW + gap,
-    y: 106,
+    y: Math.round(contentCenterY - panelH / 2),
     w: panelW,
     h: panelH,
   };
   const buttonInset = 18;
   const buttonWidth = actionPanel.w - buttonInset * 2;
   const buttonHeight = 56;
-  const buttonTop = actionPanel.y + 72;
+  const buttonTop = actionPanel.y + 76;
   const controlWidth = Math.floor((buttonWidth - 14) / 2);
-  const controlY = actionPanel.y + panelH - 44;
+  const controlY = actionPanel.y + panelH - 48;
+
+  const skinButtonY = birdCenter.y + 62;
 
   return {
-    scoreChip: { x: 36, y: 34, w: 216, h: 68 },
+    scoreChip: { x: 36, y: 16, w: 216, h: 68 },
     eyebrowY: 0,
-    titleY: 54,
+    titleY: 50,
     birdCenter,
     bird: {
       x: Math.round(birdCenter.x - BIRD_WIDTH / 2),
@@ -134,11 +141,11 @@ function createMenuLayout(): MenuLayout {
     },
     skinButton: {
       x: Math.round(birdCenter.x - 76),
-      y: 298,
+      y: skinButtonY,
       w: 152,
       h: 40,
     },
-    skinHintY: 350,
+    skinHintY: skinButtonY + 46,
     actionPanel,
     buttons: [
       { x: actionPanel.x + buttonInset, y: buttonTop, w: buttonWidth, h: buttonHeight },
@@ -164,7 +171,7 @@ function createMenuLayout(): MenuLayout {
         accent: 'rgba(244, 207, 148, 0.42)',
       },
     ],
-    soundButton: { x: 718, y: 28, w: 46, h: 46 },
+    soundButton: { x: 720, y: 20, w: 46, h: 46 },
   };
 }
 
