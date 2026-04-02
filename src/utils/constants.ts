@@ -3,10 +3,10 @@ export const GAME_WIDTH = 800;
 export const GAME_HEIGHT = 450;
 export const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT;
 
-/** Physics tuned for a tighter, more responsive flight arc. */
-export const GRAVITY = 0.34;
+/** Physics tuned for a responsive but forgiving flight arc. */
+export const GRAVITY = 0.26;
 export const FLAP_VELOCITY = -4.2;
-export const TERMINAL_VELOCITY = 10.2;
+export const TERMINAL_VELOCITY = 8.0;
 export const BIRD_X = 150;
 
 /** Bird dimensions */
