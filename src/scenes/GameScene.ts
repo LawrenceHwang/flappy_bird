@@ -1,45 +1,46 @@
-import type {
-  Scene,
-  InputAction,
-  GameMode,
-  DifficultyParams,
-  LevelConfig,
-  ActiveReward,
-  RewardType,
-} from '../utils/types';
+import { AudioManager } from '../audio/AudioManager';
+import { Background } from '../entities/Background';
+import { Bird } from '../entities/Bird';
+import { ParticleEmitter } from '../entities/Particles';
+import { PipeManager } from '../entities/PipeManager';
+import { RewardManager } from '../entities/RewardManager';
 import { COLORS } from '../utils/colors';
 import {
-  GAME_WIDTH,
-  GAME_HEIGHT,
   BIRD_X,
+  DEATH_PARTICLE_COUNT,
+  FLAP_PARTICLE_COUNT,
+  GAME_HEIGHT,
+  GAME_WIDTH,
   GROUND_HEIGHT,
-  GRAVITY,
   MULTIPLIER_DURATION,
-  SHIELD_DURATION,
-  SLOWMO_DURATION,
-  SHRINK_DURATION,
-  SLOWMO_FACTOR,
-  SHRINK_FACTOR,
+  REWARD_PARTICLE_COUNT,
   SCORE_MULTIPLIER_2X,
   SCORE_MULTIPLIER_3X,
-  FLAP_PARTICLE_COUNT,
-  DEATH_PARTICLE_COUNT,
-  REWARD_PARTICLE_COUNT,
+  SHIELD_DURATION,
+  SHRINK_DURATION,
+  SHRINK_FACTOR,
+  SLOWMO_DURATION,
+  SLOWMO_FACTOR,
+  START_COUNTDOWN_DURATION,
 } from '../utils/constants';
-import { Bird } from '../entities/Bird';
-import { PipeManager } from '../entities/PipeManager';
-import { Background } from '../entities/Background';
-import { ParticleEmitter } from '../entities/Particles';
-import { RewardManager } from '../entities/RewardManager';
-import { AudioManager } from '../audio/AudioManager';
 import { aabbOverlap } from '../utils/math';
-import { renderPauseOverlay, getPauseButtons } from './PauseScene';
+import type {
+  ActiveReward,
+  BirdSkin,
+  DifficultyParams,
+  GameMode,
+  InputAction,
+  LevelConfig,
+  RewardType,
+  Scene,
+} from '../utils/types';
+import { getPauseButtons, renderPauseOverlay } from './PauseScene';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-type GameState = 'ready' | 'playing' | 'dying' | 'dead';
+type GameState = 'ready' | 'countdown' | 'playing' | 'dying' | 'dead';
 
 interface ButtonRect {
   x: number;
@@ -104,6 +105,7 @@ export class GameScene implements Scene {
   private readonly onGameOver: (score: number) => void;
   private readonly onLevelComplete?: (level: number, score: number) => void;
   private readonly levelConfig?: LevelConfig;
+  private readonly birdSkin: BirdSkin;
 
   // Entities
   private bird!: Bird;
@@ -119,6 +121,7 @@ export class GameScene implements Scene {
   private timer = 0;
   private deathTimer = 0;
   private gameTime = 0;
+  private countdownRemaining = 0;
 
   // Rewards
   private activeRewards: ActiveReward[] = [];
@@ -148,12 +151,14 @@ export class GameScene implements Scene {
     onGameOver: (score: number) => void,
     onLevelComplete?: (level: number, score: number) => void,
     levelConfig?: LevelConfig,
+    birdSkin: BirdSkin = 'default',
   ) {
     this.mode = mode;
     this.difficulty = difficulty;
     this.onGameOver = onGameOver;
     this.onLevelComplete = onLevelComplete;
     this.levelConfig = levelConfig;
+    this.birdSkin = birdSkin;
 
     this.skyTop = levelConfig?.skyTopColor ?? COLORS.sky.topDefault;
     this.skyBottom = levelConfig?.skyBottomColor ?? COLORS.sky.bottomDefault;
@@ -165,11 +170,12 @@ export class GameScene implements Scene {
 
   /** Initialise entities and register input listeners. */
   enter(): void {
-    this.bird = new Bird();
+    this.bird = new Bird(this.birdSkin);
     this.bird.x = BIRD_X;
     this.bird.y = GAME_HEIGHT / 2;
     this.pipeManager = new PipeManager();
     this.pipeManager.setPipeSpacing(this.difficulty.pipeSpacing);
+    this.pipeManager.setInitialSpawnProgress(this.difficulty.initialSpawnProgress);
     this.background = new Background();
     this.particles = new ParticleEmitter();
 
@@ -186,6 +192,7 @@ export class GameScene implements Scene {
     this.scaleFactor = 1;
     this.deathTimer = 0;
     this.gameTime = 0;
+    this.countdownRemaining = 0;
     this.pauseSelectedIndex = 0;
 
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
@@ -220,7 +227,9 @@ export class GameScene implements Scene {
         }
         break;
       case 'confirm':
-        if (this.state === 'dead') {
+        if (this.state === 'ready') {
+          this.startCountdown();
+        } else if (this.state === 'dead') {
           this.onGameOver(this.score);
         }
         break;
@@ -235,10 +244,19 @@ export class GameScene implements Scene {
   update(dt: number): void {
     if (this.paused || this.state === 'ready') return;
 
+    if (this.state === 'countdown') {
+      this.countdownRemaining -= dt;
+      if (this.countdownRemaining <= 0) {
+        this.countdownRemaining = 0;
+        this.state = 'playing';
+      }
+      return;
+    }
+
     // Dying animation
     if (this.state === 'dying') {
       this.deathTimer += dt;
-      this.bird.update(dt, GRAVITY * this.difficulty.gravityMultiplier);
+      this.bird.update(dt, this.difficulty.gravityMultiplier);
       this.particles.update(dt);
       if (this.deathTimer > 1.5) {
         this.state = 'dead';
@@ -258,7 +276,7 @@ export class GameScene implements Scene {
     this.scaleFactor = this.hasReward('shrink') ? SHRINK_FACTOR : 1;
 
     // Update entities
-    this.bird.update(dt, GRAVITY * this.difficulty.gravityMultiplier);
+    this.bird.update(dt, this.difficulty.gravityMultiplier);
 
     // Track pipe count to detect new spawns for reward placement
     const pipeCountBefore = this.pipeManager.getActivePipes().length;
@@ -284,7 +302,7 @@ export class GameScene implements Scene {
     this.particles.update(dt);
 
     // Collision detection (manual — iterate pipe hitboxes)
-    const birdBox = this.bird.getHitbox();
+    const birdBox = this.bird.getHitbox(this.scaleFactor);
     for (const pipe of pipes) {
       const top = pipe.getTopHitbox();
       const bot = pipe.getBottomHitbox();
@@ -328,7 +346,7 @@ export class GameScene implements Scene {
     }
 
     // Bottom edge still fails, but the top edge is intentionally safe.
-    if (this.bird.y + this.bird.height >= GAME_HEIGHT - GROUND_HEIGHT) {
+    if (birdBox.y + birdBox.height >= GAME_HEIGHT - GROUND_HEIGHT) {
       this.die();
       return;
     }
@@ -395,6 +413,8 @@ export class GameScene implements Scene {
     // Overlay states
     if (this.state === 'ready') {
       this.renderReadyOverlay(ctx);
+    } else if (this.state === 'countdown') {
+      this.renderCountdownOverlay(ctx);
     } else if (this.state === 'dead') {
       this.renderDeadOverlay(ctx);
     }
@@ -415,9 +435,9 @@ export class GameScene implements Scene {
   private handleFlap(): void {
     switch (this.state) {
       case 'ready':
-        this.state = 'playing';
-        this.bird.flap();
-        AudioManager.getInstance().playFlap();
+        this.startCountdown();
+        break;
+      case 'countdown':
         break;
       case 'playing':
         this.bird.flap();
@@ -448,6 +468,12 @@ export class GameScene implements Scene {
 
   private resume(): void {
     this.paused = false;
+  }
+
+  private startCountdown(): void {
+    if (this.state !== 'ready') return;
+    this.state = 'countdown';
+    this.countdownRemaining = START_COUNTDOWN_DURATION;
   }
 
   /* ================================================================ */
@@ -613,13 +639,40 @@ export class GameScene implements Scene {
 
   private renderReadyOverlay(ctx: CanvasRenderingContext2D): void {
     ctx.save();
-    ctx.font = 'bold 28px "Segoe UI", system-ui, sans-serif';
+    ctx.font = 'bold 30px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillText('Tap to Start', GAME_WIDTH / 2 + 2, GAME_HEIGHT / 2 + 2);
+    ctx.fillText('Ready?', GAME_WIDTH / 2 + 2, GAME_HEIGHT / 2 - 12 + 2);
     ctx.fillStyle = COLORS.ui.text;
-    ctx.fillText('Tap to Start', GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    ctx.fillText('Ready?', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 12);
+
+    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.fillText('Space / Enter / Click / Tap', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
+
+    ctx.globalAlpha = 0.78;
+    ctx.font = '13px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Starts with a 3-2-1 countdown', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 44);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  private renderCountdownOverlay(ctx: CanvasRenderingContext2D): void {
+    const count = Math.max(1, Math.ceil(this.countdownRemaining));
+
+    ctx.save();
+    ctx.font = 'bold 72px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.fillText(`${count}`, GAME_WIDTH / 2 + 3, GAME_HEIGHT / 2 - 6 + 3);
+    ctx.fillStyle = COLORS.ui.text;
+    ctx.fillText(`${count}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 6);
+
+    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
+    ctx.globalAlpha = 0.88;
+    ctx.fillText('Get ready', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 42);
     ctx.restore();
   }
 

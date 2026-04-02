@@ -28,6 +28,19 @@ export const COLORS = {
     crownGem: '#FF4DD2',
   },
 
+  bee: {
+    body: '#FFD54A',
+    bodyMid: '#F7B500',
+    bodyDark: '#C98900',
+    stripe: '#2A1808',
+    wing: 'rgba(244, 249, 255, 0.82)',
+    wingOutline: 'rgba(157, 184, 209, 0.8)',
+    eye: '#180C00',
+    blush: 'rgba(255, 190, 145, 0.55)',
+    antenna: '#4A2E12',
+    stinger: '#241308',
+  },
+
   pipe: {
     // Enchanted stone-green columns
     body: '#4CAF82',

@@ -1,17 +1,17 @@
+import { AudioManager } from '../audio/AudioManager';
+import { INFINITE_DIFFICULTIES, getStoryLevelConfig } from '../modes/DifficultyConfig';
+import { DifficultySelectScene } from '../scenes/DifficultySelectScene';
+import { GameOverScene } from '../scenes/GameOverScene';
+import { GameScene } from '../scenes/GameScene';
+import { LevelCompleteScene } from '../scenes/LevelCompleteScene';
+import { MenuScene } from '../scenes/MenuScene';
+import { SceneManager } from '../scenes/SceneManager';
+import { ScoreManager } from '../storage/ScoreManager';
+import { ASPECT_RATIO, GAME_HEIGHT, GAME_WIDTH } from '../utils/constants';
+import type { Difficulty, GameMode } from '../utils/types';
 import { GameLoop } from './GameLoop';
 import { InputManager } from './InputManager';
 import { Renderer } from './Renderer';
-import { SceneManager } from '../scenes/SceneManager';
-import { MenuScene } from '../scenes/MenuScene';
-import { DifficultySelectScene } from '../scenes/DifficultySelectScene';
-import { GameScene } from '../scenes/GameScene';
-import { GameOverScene } from '../scenes/GameOverScene';
-import { LevelCompleteScene } from '../scenes/LevelCompleteScene';
-import { AudioManager } from '../audio/AudioManager';
-import { ScoreManager } from '../storage/ScoreManager';
-import { INFINITE_DIFFICULTIES, getStoryLevelConfig } from '../modes/DifficultyConfig';
-import { GAME_WIDTH, GAME_HEIGHT, ASPECT_RATIO } from '../utils/constants';
-import type { Difficulty, GameMode } from '../utils/types';
 
 /**
  * Main game orchestrator.
@@ -153,6 +153,7 @@ export class Game {
       (score) => this.handleGameOver(score),
       (lvl, score) => this.handleLevelComplete(lvl, score),
       config,
+      this.audio.birdSkin,
     );
     this.scenes.switchTo(scene, 'fade');
     // Await audio init before starting music so autoplay policy is respected
@@ -167,6 +168,9 @@ export class Game {
       'infinite',
       params,
       (score) => this.handleGameOver(score),
+      undefined,
+      undefined,
+      this.audio.birdSkin,
     );
     this.scenes.switchTo(scene, 'fade');
     // Await audio init before starting music so autoplay policy is respected

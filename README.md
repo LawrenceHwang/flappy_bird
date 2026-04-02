@@ -6,9 +6,10 @@ A cute, festive Flappy Bird game built as a single-page application with HTML5 C
 
 ## ✨ Features
 
-- **Story Mode** — 20 levels with increasing difficulty, 30 seconds each
+- **Story Mode** — 20 levels with increasing difficulty, 30 seconds each, and a shared 3-2-1 run start
 - **Infinite Mode** — Endless gameplay with 4 difficulty levels (Easy, Medium, Hard, Impossible)
-- **Power-ups** (Infinite Mode) — Score multipliers, shields, slow motion, and size reduction
+- **Power-ups** (Infinite Mode) — Multiplier, shield, slow motion, and shrink rewards with pre-run explanations
+- **Bee Skin** — Switch between the default bird and a bee variant directly from the start screen; the selection persists between sessions
 - **Magical Kingdom Visuals** — Chubby crowned bird, enchanted pipes, aurora skies, sparkles, and layered parallax scenery
 - **Procedural Audio** — All sound effects and background music synthesized via Web Audio API
 - **Responsive** — Scales to the browser's visible area while maintaining aspect ratio
@@ -20,9 +21,19 @@ A cute, festive Flappy Bird game built as a single-page application with HTML5 C
 
 | Action | Desktop | Mobile |
 |--------|---------|--------|
-| Flap | `Space` | Tap |
+| Navigate menus | `Arrow keys` / `Tab` | — |
+| Select highlighted option | `Space` / `Enter` / Click | Tap |
+| Start a run | `Space` / `Enter` / Click → 3-2-1 countdown | Tap → 3-2-1 countdown |
+| Change skin on start screen | `S` / Click skin switch | Tap skin switch |
+| Flap during gameplay | `Space` | Tap |
 | Pause | `Escape` / `P` | — |
-| Confirm | `Enter` | Tap |
+
+## 🎁 Infinite Rewards
+
+- **Multiplier** — Gives a temporary `2x` or `3x` score boost.
+- **Shield** — Blocks the next pipe collision.
+- **Slowmo** — Slows the whole run to half speed for a short window.
+- **Shrink** — Shrinks the bird visually and reduces its hitbox for tighter gaps.
 
 ## 🚀 Getting Started
 

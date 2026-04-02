@@ -1,21 +1,21 @@
 import { COLORS } from '../utils/colors';
 import {
-  BIRD_X,
-  BIRD_WIDTH,
   BIRD_HEIGHT,
   BIRD_HITBOX_INSET,
-  FLAP_VELOCITY,
-  GRAVITY,
-  TERMINAL_VELOCITY,
-  GAME_HEIGHT,
-  GROUND_HEIGHT,
-  WING_FLAP_SPEED,
-  MAX_BIRD_UP_ROTATION,
-  MAX_BIRD_DOWN_ROTATION,
   BIRD_ROTATION_SPEED,
+  BIRD_WIDTH,
+  BIRD_X,
+  FLAP_VELOCITY,
+  GAME_HEIGHT,
+  GRAVITY,
+  GROUND_HEIGHT,
+  MAX_BIRD_DOWN_ROTATION,
+  MAX_BIRD_UP_ROTATION,
+  TERMINAL_VELOCITY,
+  WING_FLAP_SPEED,
 } from '../utils/constants';
 import { clamp } from '../utils/math';
-import type { AABB } from '../utils/types';
+import type { AABB, BirdSkin } from '../utils/types';
 
 /**
  * The player-controlled bird entity.
@@ -33,8 +33,13 @@ export class Bird {
   public readonly height: number = BIRD_HEIGHT;
   public isAlive: boolean = true;
   public wingAngle: number = 0;
+  public skin: BirdSkin;
 
   private wingTime: number = 0;
+
+  constructor(skin: BirdSkin = 'default') {
+    this.skin = skin;
+  }
 
   /**
    * Step physics, wing animation, and rotation.
@@ -93,6 +98,12 @@ export class Bird {
     ctx.translate(cx, cy);
     ctx.rotate(this.rotation);
     ctx.scale(scaleFactor, scaleFactor);
+
+    if (this.skin === 'bee') {
+      this.renderBeeSkin(ctx);
+      ctx.restore();
+      return;
+    }
 
     // Chubby body is slightly wider and more spherical
     const hw = this.width / 2 + 2;
@@ -228,6 +239,128 @@ export class Bird {
     ctx.restore();
   }
 
+  private renderBeeSkin(ctx: CanvasRenderingContext2D): void {
+    const hw = this.width / 2 + 2;
+    const hh = this.height / 2 + 3;
+
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = '#2A1808';
+    ctx.beginPath();
+    ctx.ellipse(2, hh * 0.75, hw * 0.82, hh * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(-hw * 0.1, -hh * 0.18);
+    ctx.rotate(-0.55 + this.wingAngle * 0.35);
+    ctx.fillStyle = COLORS.bee.wing;
+    ctx.strokeStyle = COLORS.bee.wingOutline;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(-2, 0, hw * 0.42, hh * 0.56, -0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(hw * 0.02, -hh * 0.26);
+    ctx.rotate(0.22 - this.wingAngle * 0.28);
+    ctx.fillStyle = COLORS.bee.wing;
+    ctx.strokeStyle = COLORS.bee.wingOutline;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, hw * 0.36, hh * 0.48, 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    const bodyGrad = ctx.createRadialGradient(-hw * 0.2, -hh * 0.22, hw * 0.08, 0, 0, hw * 1.08);
+    bodyGrad.addColorStop(0, '#FFF1A6');
+    bodyGrad.addColorStop(0.45, COLORS.bee.body);
+    bodyGrad.addColorStop(0.75, COLORS.bee.bodyMid);
+    bodyGrad.addColorStop(1, COLORS.bee.bodyDark);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 208, 96, 0.38)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = COLORS.bee.stripe;
+    ctx.fillRect(-hw * 0.38, -hh, hw * 0.22, hh * 2);
+    ctx.fillRect(-hw * 0.02, -hh, hw * 0.22, hh * 2);
+    ctx.fillRect(hw * 0.34, -hh, hw * 0.18, hh * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(92, 57, 9, 0.45)';
+    ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.strokeStyle = COLORS.bee.antenna;
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hw * 0.12, -hh * 0.78);
+    ctx.quadraticCurveTo(hw * 0.14, -hh * 1.08, hw * 0.02, -hh * 1.2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hw * 0.3, -hh * 0.72);
+    ctx.quadraticCurveTo(hw * 0.42, -hh * 1.02, hw * 0.58, -hh * 1.08);
+    ctx.stroke();
+
+    ctx.fillStyle = COLORS.bee.antenna;
+    ctx.beginPath();
+    ctx.arc(hw * 0.02, -hh * 1.2, 2.2, 0, Math.PI * 2);
+    ctx.arc(hw * 0.58, -hh * 1.08, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = COLORS.bee.stinger;
+    ctx.beginPath();
+    ctx.moveTo(-hw * 0.98, -2);
+    ctx.lineTo(-hw * 1.22, 0);
+    ctx.lineTo(-hw * 0.98, 3);
+    ctx.closePath();
+    ctx.fill();
+
+    const eyeX = hw * 0.34;
+    const eyeY = -hh * 0.18;
+    ctx.fillStyle = COLORS.bee.eye;
+    ctx.beginPath();
+    ctx.arc(eyeX, eyeY, 5.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(eyeX + 1.8, eyeY - 1.8, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    const blushGrad = ctx.createRadialGradient(hw * 0.38, hh * 0.16, 0, hw * 0.38, hh * 0.16, 7);
+    blushGrad.addColorStop(0, COLORS.bee.blush);
+    blushGrad.addColorStop(1, 'rgba(255, 190, 145, 0)');
+    ctx.fillStyle = blushGrad;
+    ctx.beginPath();
+    ctx.ellipse(hw * 0.38, hh * 0.16, 7, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(78, 48, 12, 0.55)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(hw * 0.18, hh * 0.08, 8, 0.15, 1.2);
+    ctx.stroke();
+  }
+
   /** Draw a tiny golden crown on top of the bird's head. */
   private renderCrown(ctx: CanvasRenderingContext2D, hw: number, hh: number): void {
     ctx.save();
@@ -277,12 +410,19 @@ export class Bird {
   /**
    * Collision AABB, slightly inset from the visual bounds for forgiving hits.
    */
-  getHitbox(): AABB {
+  getHitbox(scaleFactor: number = 1.0): AABB {
+    const clampedScale = Math.max(0.45, scaleFactor);
+    const scaledWidth = this.width * clampedScale;
+    const scaledHeight = this.height * clampedScale;
+    const offsetX = (this.width - scaledWidth) / 2;
+    const offsetY = (this.height - scaledHeight) / 2;
+    const inset = BIRD_HITBOX_INSET * clampedScale;
+
     return {
-      x: this.x + BIRD_HITBOX_INSET,
-      y: this.y + BIRD_HITBOX_INSET,
-      width: this.width - BIRD_HITBOX_INSET * 2,
-      height: this.height - BIRD_HITBOX_INSET * 2,
+      x: this.x + offsetX + inset,
+      y: this.y + offsetY + inset,
+      width: scaledWidth - inset * 2,
+      height: scaledHeight - inset * 2,
     };
   }
 

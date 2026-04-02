@@ -1,7 +1,7 @@
-import type { Difficulty, DifficultyParams, LevelConfig } from '../utils/types';
 import { LEVEL_SKY_COLORS } from '../utils/colors';
-import { lerp } from '../utils/math';
 import { STORY_LEVEL_DURATION } from '../utils/constants';
+import { lerp } from '../utils/math';
+import type { Difficulty, DifficultyParams, LevelConfig } from '../utils/types';
 
 /**
  * Difficulty parameters for each infinite mode preset.
@@ -10,36 +10,40 @@ import { STORY_LEVEL_DURATION } from '../utils/constants';
 export const INFINITE_DIFFICULTIES: Record<Difficulty, DifficultyParams> = {
   easy: {
     pipeGap: 220,
-    scrollSpeed: 2,
+    scrollSpeed: 2.2,
     pipeSpacing: 420,
-    gravityMultiplier: 0.88,
+    initialSpawnProgress: 170,
+    gravityMultiplier: 0.94,
     movingPipes: false,
     pipeOscillationSpeed: 0,
     pipeOscillationRange: 0,
   },
   medium: {
     pipeGap: 185,
-    scrollSpeed: 2.8,
+    scrollSpeed: 3.05,
     pipeSpacing: 340,
-    gravityMultiplier: 0.95,
+    initialSpawnProgress: 140,
+    gravityMultiplier: 1,
     movingPipes: false,
     pipeOscillationSpeed: 0,
     pipeOscillationRange: 0,
   },
   hard: {
     pipeGap: 145,
-    scrollSpeed: 4.1,
+    scrollSpeed: 4.45,
     pipeSpacing: 280,
-    gravityMultiplier: 1.05,
+    initialSpawnProgress: 110,
+    gravityMultiplier: 1.08,
     movingPipes: true,
     pipeOscillationSpeed: 1.5,
     pipeOscillationRange: 30,
   },
   impossible: {
     pipeGap: 110,
-    scrollSpeed: 5.5,
+    scrollSpeed: 5.85,
     pipeSpacing: 235,
-    gravityMultiplier: 1.2,
+    initialSpawnProgress: 92,
+    gravityMultiplier: 1.16,
     movingPipes: true,
     pipeOscillationSpeed: 2.5,
     pipeOscillationRange: 50,
@@ -63,9 +67,10 @@ export function getStoryLevelConfig(level: number): LevelConfig {
     level: clamped,
     difficulty: {
       pipeGap: lerp(210, 125, progress),
-      scrollSpeed: lerp(1.8, 4.6, progress),
+      scrollSpeed: lerp(1.95, 5.05, progress),
       pipeSpacing: lerp(410, 255, progress),
-      gravityMultiplier: lerp(0.88, 1.15, progress),
+      initialSpawnProgress: lerp(165, 95, progress),
+      gravityMultiplier: lerp(0.94, 1.16, progress),
       movingPipes: movingPipesActive,
       pipeOscillationSpeed: movingPipesActive ? lerp(0.8, 2.5, oscillationProgress) : 0,
       pipeOscillationRange: movingPipesActive ? lerp(15, 50, oscillationProgress) : 0,

@@ -30,6 +30,9 @@ export type GameMode = 'story' | 'infinite';
 /** Difficulty presets for infinite mode */
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'impossible';
 
+/** Cosmetic bird skins */
+export type BirdSkin = 'default' | 'bee';
+
 /** Power-up / reward types */
 export type RewardType = 'multiplier' | 'shield' | 'slowmo' | 'shrink';
 
@@ -45,6 +48,7 @@ export interface DifficultyParams {
   pipeGap: number;
   scrollSpeed: number;
   pipeSpacing: number;
+  initialSpawnProgress: number;
   gravityMultiplier: number;
   movingPipes: boolean;
   pipeOscillationSpeed: number;

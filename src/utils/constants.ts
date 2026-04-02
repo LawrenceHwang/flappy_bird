@@ -3,10 +3,10 @@ export const GAME_WIDTH = 800;
 export const GAME_HEIGHT = 450;
 export const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT;
 
-/** Physics tuned for a more forgiving, readable flight arc. */
-export const GRAVITY = 0.42;
-export const FLAP_VELOCITY = -3.8;
-export const TERMINAL_VELOCITY = 9.5;
+/** Physics tuned for a tighter, more responsive flight arc. */
+export const GRAVITY = 0.34;
+export const FLAP_VELOCITY = -4.2;
+export const TERMINAL_VELOCITY = 10.2;
 export const BIRD_X = 150;
 
 /** Bird dimensions */
@@ -26,6 +26,7 @@ export const GROUND_HEIGHT = 50;
 /** Timing */
 export const STORY_LEVEL_DURATION = 30;
 export const REWARD_SPAWN_CHANCE = 0.08;
+export const START_COUNTDOWN_DURATION = 3;
 
 /** Reward durations (seconds) */
 export const MULTIPLIER_DURATION = 10;

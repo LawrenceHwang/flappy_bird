@@ -1,11 +1,11 @@
-import { Pipe } from './Pipe';
 import {
-  GAME_WIDTH,
   GAME_HEIGHT,
+  GAME_WIDTH,
   GROUND_HEIGHT,
   MIN_PIPE_HEIGHT,
 } from '../utils/constants';
 import { randomRange } from '../utils/math';
+import { Pipe } from './Pipe';
 
 /** Margin beyond the right edge where new pipes spawn. */
 const SPAWN_MARGIN = 20;
@@ -21,6 +21,7 @@ export class PipeManager {
   private pool: Pipe[] = [];
   private spawnTimer: number = 0;
   private pipeSpacing: number = 200;
+  private initialSpawnProgress: number = 0;
 
   /**
    * Tick all active pipes forward and handle spawning / recycling.
@@ -104,6 +105,16 @@ export class PipeManager {
   /** Change the horizontal distance between consecutive pipes. */
   setPipeSpacing(spacing: number): void {
     this.pipeSpacing = spacing;
+    const maxProgress = Math.max(0, spacing - 1);
+    this.initialSpawnProgress = Math.min(this.initialSpawnProgress, maxProgress);
+    this.spawnTimer = Math.min(this.spawnTimer, maxProgress);
+  }
+
+  /** Prefill spawn progress so the first pipe can arrive sooner than later ones. */
+  setInitialSpawnProgress(progress: number): void {
+    const maxProgress = Math.max(0, this.pipeSpacing - 1);
+    this.initialSpawnProgress = Math.max(0, Math.min(progress, maxProgress));
+    this.spawnTimer = this.initialSpawnProgress;
   }
 
   /** Return all active pipes to the pool and reset the spawn timer. */
@@ -112,7 +123,7 @@ export class PipeManager {
       this.pool.push(pipe);
     }
     this.activePipes.length = 0;
-    this.spawnTimer = 0;
+    this.spawnTimer = this.initialSpawnProgress;
   }
 
   // ---- internals -------------------------------------------------------

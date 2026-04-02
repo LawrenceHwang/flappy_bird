@@ -8,6 +8,7 @@ The game supports two modes:
 
 - **Story mode** with 20 levels
 - **Infinite mode** with four fixed difficulty presets
+- **Cosmetic bird skins** with a default bird and a bee option
 
 The design goal is a game that feels cute, festive, smooth, approachable, and easy to deploy as a static site.
 
@@ -16,11 +17,13 @@ The design goal is a game that feels cute, festive, smooth, approachable, and ea
 ### Core loop
 
 - The world scrolls left to simulate forward movement.
-- The player presses `Space` or taps to flap upward.
+- The player starts each run with `Space`, `Enter`, click, or tap, then sees a `3-2-1` countdown before motion begins.
+- The player presses `Space` or taps to flap upward during gameplay.
 - Gravity pulls the bird down when not flapping.
 - Passing a pipe increases score.
 - Hitting a pipe or the ground causes failure.
 - Hitting the top of the screen does **not** fail the run; the bird is clamped to the top border.
+- The first pipe is intentionally brought in sooner than later obstacles so the opening seconds feel less empty.
 
 ### Story mode
 
@@ -33,19 +36,26 @@ The design goal is a game that feels cute, festive, smooth, approachable, and ea
 - Difficulties: Easy, Medium, Hard, Impossible
 - Endless play
 - Random rewards can spawn in pipe gaps:
-  - Score multiplier
-  - Shield
-  - Slow motion
-  - Size reduction
+  - **Multiplier**: temporary `2x` or `3x` score
+  - **Shield**: blocks one pipe collision
+  - **Slow motion**: halves the run speed temporarily
+  - **Shrink**: reduces both the bird's visual size and hitbox temporarily
+
+### Cosmetics
+
+- The start screen exposes a quick skin switch.
+- Players can cycle between the default bird and a bee skin without leaving the main menu.
+- The selected skin is cosmetic only and persists in `localStorage`.
 
 ## Physics Design
 
-The physics are intentionally forgiving.
+The physics are intentionally readable but less floaty than before.
 
-- Gravity is tuned to allow readable recovery windows.
-- Flap strength is strong enough to correct quickly without producing twitchy overcorrection.
-- Terminal velocity is capped to avoid harsh drops.
+- Gravity is tuned to make descent more responsive.
+- Flap strength remains strong enough to recover without making the bird feel twitchy.
+- Terminal velocity is capped to avoid harsh drops even after the tighter tuning pass.
 - Bird hitboxes are slightly inset from visuals to reduce frustrating near-miss collisions.
+- Difficulty presets increase forward pace while preserving the overall ladder from Easy to Impossible.
 - The top border clamps position instead of failing the player.
 
 ## Rendering Design
@@ -92,7 +102,7 @@ Audio uses the Web Audio API only.
 ### Persistence
 
 - `ScoreManager.ts` stores scores in `localStorage`
-- `AudioManager.ts` stores player sound preferences in `localStorage`
+- `AudioManager.ts` stores player sound preferences and the selected bird skin in `localStorage`
 
 ## Performance Strategy
 

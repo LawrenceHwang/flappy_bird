@@ -1,6 +1,6 @@
-import type { Scene, InputAction, Difficulty } from '../utils/types';
 import { COLORS } from '../utils/colors';
-import { GAME_WIDTH, GAME_HEIGHT, GROUND_HEIGHT } from '../utils/constants';
+import { GAME_HEIGHT, GAME_WIDTH, GROUND_HEIGHT } from '../utils/constants';
+import type { Difficulty, InputAction, Scene } from '../utils/types';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -62,6 +62,13 @@ interface DifficultyMeta {
   textColor: string;
 }
 
+interface RewardLegendItem {
+  badge: string;
+  label: string;
+  detail: string;
+  color: string;
+}
+
 const DIFFICULTY_META: DifficultyMeta[] = [
   {
     key: 'easy',
@@ -90,6 +97,33 @@ const DIFFICULTY_META: DifficultyMeta[] = [
     description: 'Pure chaos, good luck!',
     colors: ['#D63031', '#FF6B6B'],
     textColor: COLORS.ui.text,
+  },
+];
+
+const REWARD_LEGEND: RewardLegendItem[] = [
+  {
+    badge: 'x2',
+    label: 'Multiplier',
+    detail: '2x or 3x score',
+    color: COLORS.reward.multiplier,
+  },
+  {
+    badge: 'S',
+    label: 'Shield',
+    detail: 'Blocks one hit',
+    color: COLORS.reward.shield,
+  },
+  {
+    badge: '1/2',
+    label: 'Slowmo',
+    detail: 'Half-speed run',
+    color: COLORS.reward.slowmo,
+  },
+  {
+    badge: '<>',
+    label: 'Shrink',
+    detail: 'Smaller hitbox',
+    color: COLORS.reward.shrink,
   },
 ];
 
@@ -272,6 +306,8 @@ export class DifficultySelectScene implements Scene {
     ctx.fillText('Select Difficulty', GAME_WIDTH / 2, 60);
     ctx.restore();
 
+    this.renderRewardLegend(ctx);
+
     // Difficulty buttons
     this.diffButtons.forEach((btn, i) => {
       const meta = DIFFICULTY_META[i];
@@ -383,5 +419,57 @@ export class DifficultySelectScene implements Scene {
     } else {
       this.onBack();
     }
+  }
+
+  private renderRewardLegend(ctx: CanvasRenderingContext2D): void {
+    const panel = { x: 18, y: 114, w: 172, h: 200 };
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(30, 20, 60, 0.7)';
+    roundedRectPath(ctx, panel.x, panel.y, panel.w, panel.h, 16);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = COLORS.ui.text;
+    ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Infinite Rewards', panel.x + 14, panel.y + 14);
+
+    ctx.globalAlpha = 0.72;
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Available only in Infinite mode', panel.x + 14, panel.y + 36);
+    ctx.globalAlpha = 1;
+
+    REWARD_LEGEND.forEach((reward, index) => {
+      const rowY = panel.y + 60 + index * 34;
+
+      ctx.fillStyle = reward.color;
+      ctx.beginPath();
+      ctx.arc(panel.x + 22, rowY + 10, 11, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = COLORS.ui.textDark;
+      ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(reward.badge, panel.x + 22, rowY + 10);
+
+      ctx.fillStyle = COLORS.ui.text;
+      ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(reward.label, panel.x + 40, rowY);
+
+      ctx.globalAlpha = 0.8;
+      ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(reward.detail, panel.x + 40, rowY + 14);
+      ctx.globalAlpha = 1;
+    });
+
+    ctx.restore();
   }
 }

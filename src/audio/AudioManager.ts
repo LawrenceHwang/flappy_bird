@@ -1,9 +1,17 @@
 import { STORAGE_SETTINGS_KEY } from '../utils/constants';
+import type { BirdSkin } from '../utils/types';
+
+const DEFAULT_BIRD_SKIN: BirdSkin = 'default';
+
+function isBirdSkin(value: unknown): value is BirdSkin {
+  return value === 'default' || value === 'bee';
+}
 
 /** Persisted audio settings shape. */
 interface AudioSettings {
   muted: boolean;
   musicEnabled: boolean;
+  birdSkin: BirdSkin;
 }
 
 /**
@@ -40,6 +48,7 @@ export class AudioManager {
   private musicInterval: ReturnType<typeof setInterval> | null = null;
   private _muted: boolean;
   private _musicEnabled: boolean;
+  private _birdSkin: BirdSkin;
   private initialized = false;
   /** Guard against concurrent calls to init() racing each other. */
   private initPromise: Promise<void> | null = null;
@@ -55,6 +64,7 @@ export class AudioManager {
     const settings = this.loadSettings();
     this._muted = settings.muted;
     this._musicEnabled = settings.musicEnabled;
+    this._birdSkin = settings.birdSkin;
   }
 
   /**
@@ -133,6 +143,16 @@ export class AudioManager {
     if (!value) {
       this.stopMusic();
     }
+    this.saveSettings();
+  }
+
+  /** Currently selected cosmetic bird skin. */
+  get birdSkin(): BirdSkin {
+    return this._birdSkin;
+  }
+
+  set birdSkin(value: BirdSkin) {
+    this._birdSkin = value;
     this.saveSettings();
   }
 
@@ -449,13 +469,14 @@ export class AudioManager {
               typeof obj['musicEnabled'] === 'boolean'
                 ? obj['musicEnabled']
                 : true,
+            birdSkin: isBirdSkin(obj['birdSkin']) ? obj['birdSkin'] : DEFAULT_BIRD_SKIN,
           };
         }
       }
     } catch {
       // Corrupted data — fall through to defaults.
     }
-    return { muted: false, musicEnabled: true };
+    return { muted: false, musicEnabled: true, birdSkin: DEFAULT_BIRD_SKIN };
   }
 
   /** Persist current audio settings to localStorage. */
@@ -464,6 +485,7 @@ export class AudioManager {
       const settings: AudioSettings = {
         muted: this._muted,
         musicEnabled: this._musicEnabled,
+        birdSkin: this._birdSkin,
       };
       localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(settings));
     } catch {
