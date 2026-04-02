@@ -94,42 +94,39 @@ function roundedRectPath(
 
 const AVAILABLE_SKINS: readonly BirdSkin[] = ['default', 'bee'];
 
-const PHI = 1.61803398875;
-
 /** Bird rendered at this scale on the menu for prominence. */
 const MENU_BIRD_SCALE = 1.95;
 
 function createMenuLayout(): MenuLayout {
-  const safeFrame = {
-    x: 40,
-    y: 26,
-    w: GAME_WIDTH - 80,
-    h: GAME_HEIGHT - 52,
-  };
-  const leftGuide = safeFrame.x + safeFrame.w / (PHI * PHI);
-  const rightGuide = safeFrame.x + safeFrame.w / PHI;
-  const topGuide = safeFrame.y + safeFrame.h / (PHI * PHI);
+  /* Centered composition: bird on left, action panel on right */
+  const panelW = 340;
+  const panelH = 272;
+  const birdAreaW = 160;
+  const gap = 28;
+  const totalW = birdAreaW + gap + panelW; // 528
+  const startX = Math.round((GAME_WIDTH - totalW) / 2); // 136
+
   const birdCenter = {
-    x: Math.round(leftGuide - 20),
-    y: Math.round(topGuide + 12),
+    x: Math.round(startX + birdAreaW / 2),
+    y: 226,
   };
   const actionPanel = {
-    x: Math.round(rightGuide - 60),
-    y: 100,
-    w: safeFrame.x + safeFrame.w - Math.round(rightGuide - 60),
-    h: 278,
+    x: startX + birdAreaW + gap,
+    y: 106,
+    w: panelW,
+    h: panelH,
   };
-  const buttonInset = 20;
+  const buttonInset = 18;
   const buttonWidth = actionPanel.w - buttonInset * 2;
   const buttonHeight = 56;
-  const buttonTop = actionPanel.y + 78;
+  const buttonTop = actionPanel.y + 72;
   const controlWidth = Math.floor((buttonWidth - 14) / 2);
-  const controlY = actionPanel.y + actionPanel.h - 46;
+  const controlY = actionPanel.y + panelH - 44;
 
   return {
-    scoreChip: { x: 42, y: 40, w: 182, h: 58 },
-    eyebrowY: 42,
-    titleY: 72,
+    scoreChip: { x: 36, y: 34, w: 216, h: 68 },
+    eyebrowY: 0,
+    titleY: 54,
     birdCenter,
     bird: {
       x: Math.round(birdCenter.x - BIRD_WIDTH / 2),
@@ -137,11 +134,11 @@ function createMenuLayout(): MenuLayout {
     },
     skinButton: {
       x: Math.round(birdCenter.x - 76),
-      y: 292,
+      y: 298,
       w: 152,
       h: 40,
     },
-    skinHintY: 346,
+    skinHintY: 350,
     actionPanel,
     buttons: [
       { x: actionPanel.x + buttonInset, y: buttonTop, w: buttonWidth, h: buttonHeight },
@@ -438,32 +435,28 @@ export class MenuScene implements Scene {
   }
 
   private renderTitle(ctx: CanvasRenderingContext2D): void {
-    const cx = GAME_WIDTH / 2 + 28;
+    const cx = GAME_WIDTH / 2;
     const ty = MENU_LAYOUT.titleY;
     const text = 'Flappy Bird';
 
     ctx.save();
 
-    ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.letterSpacing = '3px';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 239, 208, 0.68)';
-    ctx.fillText('STORYBOOK ARCADE', cx, MENU_LAYOUT.eyebrowY);
-
     ctx.font = 'bold 50px Georgia, Cambria, "Times New Roman", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Shadow
     ctx.fillStyle = 'rgba(37, 25, 18, 0.36)';
     ctx.fillText(text, cx + 2, ty + 5);
 
+    // Stroke outline
     ctx.lineJoin = 'round';
     ctx.lineWidth = 5;
     ctx.strokeStyle = 'rgba(102, 58, 36, 0.9)';
     ctx.strokeText(text, cx, ty);
 
-    const grad = ctx.createLinearGradient(210, 28, 590, 100);
+    // Gradient fill
+    const grad = ctx.createLinearGradient(cx - 190, 28, cx + 190, 100);
     grad.addColorStop(0, '#FFF7DE');
     grad.addColorStop(0.38, '#F7D59F');
     grad.addColorStop(0.76, '#E29E65');
@@ -473,6 +466,7 @@ export class MenuScene implements Scene {
     ctx.fillStyle = grad;
     ctx.fillText(text, cx, ty);
 
+    // Specular highlight (top half clip)
     ctx.shadowBlur = 0;
     ctx.save();
     ctx.beginPath();
@@ -482,6 +476,7 @@ export class MenuScene implements Scene {
     ctx.fillText(text, cx, ty);
     ctx.restore();
 
+    // Decorative hairline + diamond
     ctx.strokeStyle = 'rgba(255, 231, 192, 0.34)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -493,10 +488,6 @@ export class MenuScene implements Scene {
     ctx.beginPath();
     ctx.arc(cx, ty + 25, 2.1, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.font = '600 12px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillStyle = 'rgba(255, 244, 220, 0.56)';
-    ctx.fillText('Hand-crafted stages, endless flight.', cx, ty + 40);
 
     ctx.restore();
   }
@@ -803,13 +794,13 @@ export class MenuScene implements Scene {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(255, 234, 206, 0.5)';
     ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('PLAY MODES', panel.x + panel.w / 2, panel.y + 24);
+    ctx.fillText('PLAY MODES', panel.x + panel.w / 2, panel.y + 22);
     ctx.fillStyle = 'rgba(255, 247, 230, 0.9)';
-    ctx.font = 'bold 24px Georgia, Cambria, "Times New Roman", serif';
-    ctx.fillText('Choose a Flight Path', panel.x + panel.w / 2, panel.y + 48);
+    ctx.font = 'bold 22px Georgia, Cambria, "Times New Roman", serif';
+    ctx.fillText('Choose a Flight Path', panel.x + panel.w / 2, panel.y + 44);
     ctx.fillStyle = 'rgba(255, 242, 226, 0.58)';
     ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('Start with a curated journey or chase an endless score.', panel.x + panel.w / 2, panel.y + 66);
+    ctx.fillText('Curated journey or endless score.', panel.x + panel.w / 2, panel.y + 62);
     ctx.restore();
   }
 
@@ -834,25 +825,26 @@ export class MenuScene implements Scene {
     ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('HIGH SCORES', chip.x + 16, chip.y + 10);
+    ctx.fillText('HIGH SCORES', chip.x + 16, chip.y + 12);
 
     ctx.strokeStyle = 'rgba(255, 233, 197, 0.08)';
     ctx.beginPath();
-    ctx.moveTo(chip.x + chip.w / 2, chip.y + 28);
-    ctx.lineTo(chip.x + chip.w / 2, chip.y + chip.h - 12);
+    ctx.moveTo(chip.x + chip.w / 2, chip.y + 30);
+    ctx.lineTo(chip.x + chip.w / 2, chip.y + chip.h - 10);
     ctx.stroke();
 
     const storyLabelX = chip.x + 18;
     const infiniteLabelX = chip.x + chip.w / 2 + 14;
     ctx.fillStyle = 'rgba(255, 239, 221, 0.56)';
     ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('Story', storyLabelX, chip.y + 34);
-    ctx.fillText('Infinite', infiniteLabelX, chip.y + 34);
+    ctx.fillText('Story', storyLabelX, chip.y + 30);
+    ctx.fillText('Infinite', infiniteLabelX, chip.y + 30);
 
     ctx.fillStyle = COLORS.ui.text;
-    ctx.font = 'bold 19px Georgia, Cambria, "Times New Roman", serif';
-    ctx.fillText(`${storyBest}`, storyLabelX, chip.y + 44);
-    ctx.fillText(`${infiniteBest}`, infiniteLabelX, chip.y + 44);
+    ctx.font = 'bold 17px Georgia, Cambria, "Times New Roman", serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${storyBest}`, storyLabelX, chip.y + 54);
+    ctx.fillText(`${infiniteBest}`, infiniteLabelX, chip.y + 54);
 
     const accentX = chip.x + chip.w - 18;
     ctx.fillStyle = 'rgba(245, 203, 124, 0.82)';
