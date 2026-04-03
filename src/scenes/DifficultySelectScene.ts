@@ -1,5 +1,5 @@
 import { Background } from '../entities/Background';
-import { drawButton, drawControlPill, drawGlassPanel } from '../graphics/ui-kit';
+import { drawButton, drawGlassPanel, drawSceneTitle, roundedRectPath } from '../graphics/ui-kit';
 import { COLORS } from '../utils/colors';
 import { GAME_HEIGHT, GAME_WIDTH } from '../utils/constants';
 import type { Difficulty, InputAction, Scene } from '../utils/types';
@@ -16,13 +16,12 @@ interface ButtonRect {
 }
 
 interface DifficultyLayout {
-  eyebrowY: number;
   titleY: number;
   panel: ButtonRect;
   dividerX: number;
   diffButtons: readonly ButtonRect[];
+  footer: ButtonRect;
   backButton: ButtonRect;
-  controlPills: readonly ButtonRect[];
 }
 
 function pointInRect(px: number, py: number, r: ButtonRect): boolean {
@@ -41,34 +40,12 @@ function toCanvasCoords(
   };
 }
 
-function roundedRectPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 /* ------------------------------------------------------------------ */
 /*  Difficulty metadata                                                */
 /* ------------------------------------------------------------------ */
 
 interface DifficultyMeta {
   key: Difficulty;
-  kicker: string;
   label: string;
   description: string;
   colors: [string, string];
@@ -76,25 +53,23 @@ interface DifficultyMeta {
 }
 
 interface RewardLegendItem {
-  badge: string;
   label: string;
-  detail: string;
   color: string;
 }
 
 function createDifficultyLayout(): DifficultyLayout {
-  const panel = { x: 44, y: 94, w: 712, h: 260 };
-  const dividerX = panel.x + 204;
-  const cardW = 226;
-  const cardH = 88;
+  const panel = { x: 44, y: 120, w: 712, h: 236 };
+  const dividerX = panel.x + 190;
+  const cardW = 234;
+  const cardH = 82;
   const gapX = 16;
   const gapY = 14;
   const gridX = dividerX + 20;
-  const gridY = panel.y + 48;
+  const gridY = panel.y + 34;
+  const footer = { x: 44, y: 368, w: 712, h: 48 };
 
   return {
-    eyebrowY: 48,
-    titleY: 78,
+    titleY: 82,
     panel,
     dividerX,
     diffButtons: [
@@ -103,11 +78,8 @@ function createDifficultyLayout(): DifficultyLayout {
       { x: gridX, y: gridY + cardH + gapY, w: cardW, h: cardH },
       { x: gridX + cardW + gapX, y: gridY + cardH + gapY, w: cardW, h: cardH },
     ],
-    backButton: { x: 310, y: 362, w: 180, h: 30 },
-    controlPills: [
-      { x: 233, y: 410, w: 156, h: 22 },
-      { x: 401, y: 410, w: 156, h: 22 },
-    ],
+    footer,
+    backButton: { x: footer.x + 14, y: footer.y + 4, w: 196, h: 40 },
   };
 }
 
@@ -116,33 +88,29 @@ const DIFFICULTY_LAYOUT = createDifficultyLayout();
 const DIFFICULTY_META: DifficultyMeta[] = [
   {
     key: 'easy',
-    kicker: 'ENTRY',
     label: 'Easy',
-    description: 'Wide gates and slower scroll',
+    description: 'Wide gates, slower scroll',
     colors: ['#0A6E60', '#5AECD4'],
     textColor: COLORS.ui.text,
   },
   {
     key: 'medium',
-    kicker: 'STANDARD',
     label: 'Medium',
-    description: 'Balanced pace for repeat runs',
+    description: 'Balanced pace',
     colors: ['#7A5510', '#FFD06B'],
     textColor: COLORS.ui.text,
   },
   {
     key: 'hard',
-    kicker: 'ADVANCED',
     label: 'Hard',
-    description: 'Moving pipes and tighter windows',
+    description: 'Moving pipes, tighter gaps',
     colors: ['#8C2A22', '#FF8F6B'],
     textColor: COLORS.ui.text,
   },
   {
     key: 'impossible',
-    kicker: 'LEGEND',
     label: 'Impossible',
-    description: 'Relentless speed and no mercy',
+    description: 'Max speed, no mercy',
     colors: ['#7A1535', '#FF5C85'],
     textColor: COLORS.ui.text,
   },
@@ -150,27 +118,19 @@ const DIFFICULTY_META: DifficultyMeta[] = [
 
 const REWARD_LEGEND: RewardLegendItem[] = [
   {
-    badge: 'x2',
-    label: 'Multiplier',
-    detail: 'Temporary 2x or 3x scoring',
+    label: '2x Score',
     color: COLORS.reward.multiplier,
   },
   {
-    badge: 'S',
     label: 'Shield',
-    detail: 'Blocks the next pipe collision',
     color: COLORS.reward.shield,
   },
   {
-    badge: '½',
     label: 'Slowmo',
-    detail: 'Cuts the run speed in half',
     color: COLORS.reward.slowmo,
   },
   {
-    badge: '↔',
     label: 'Shrink',
-    detail: 'Tightens the bird hitbox',
     color: COLORS.reward.shrink,
   },
 ];
@@ -321,8 +281,7 @@ export class DifficultySelectScene implements Scene {
     this.renderAtmosphericLighting(ctx);
     this.renderTitle(ctx);
     this.renderPanel(ctx);
-    this.renderBackButton(ctx);
-    this.renderControlHints(ctx);
+    this.renderFooter(ctx);
   }
 
   /* -------- private -------- */
@@ -444,54 +403,13 @@ export class DifficultySelectScene implements Scene {
   }
 
   private renderTitle(ctx: CanvasRenderingContext2D): void {
-    const cx = GAME_WIDTH / 2;
-
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // Eyebrow
-    ctx.fillStyle = 'rgba(255, 239, 205, 0.68)';
-    ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('INFINITE MODE', cx, DIFFICULTY_LAYOUT.eyebrowY);
-
-    const titleText = 'Choose a Challenge';
-    const titleY = DIFFICULTY_LAYOUT.titleY;
-
-    // Layer 1: Shadow
-    ctx.font = 'bold 40px Georgia, Cambria, "Times New Roman", serif';
-    ctx.fillStyle = 'rgba(36, 25, 18, 0.3)';
-    ctx.fillText(titleText, cx + 2, titleY + 4);
-
-    // Layer 2: Stroke
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(93, 59, 44, 0.84)';
-    ctx.strokeText(titleText, cx, titleY);
-
-    // Layer 3: Gradient fill
-    const fill = ctx.createLinearGradient(210, 52, 590, 110);
-    fill.addColorStop(0, '#FFF7DE');
-    fill.addColorStop(0.44, '#F1D3A1');
-    fill.addColorStop(1, '#D18561');
-    ctx.fillStyle = fill;
-    ctx.fillText(titleText, cx, titleY);
-
-    // Layer 4: Specular highlight
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(titleText, cx, titleY - 1);
-    ctx.globalAlpha = 1;
-
-    // Hairline below title
-    ctx.strokeStyle = 'rgba(255, 232, 196, 0.12)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx - 160, titleY + 16);
-    ctx.lineTo(cx + 160, titleY + 16);
-    ctx.stroke();
-
-    ctx.restore();
+    drawSceneTitle(ctx, {
+      x: GAME_WIDTH / 2,
+      y: DIFFICULTY_LAYOUT.titleY,
+      eyebrow: 'INFINITE MODE',
+      title: 'Choose a Challenge',
+      width: 360,
+    });
   }
 
   private renderPanel(ctx: CanvasRenderingContext2D): void {
@@ -514,52 +432,44 @@ export class DifficultySelectScene implements Scene {
 
   private renderRewardLegend(ctx: CanvasRenderingContext2D): void {
     const panel = DIFFICULTY_LAYOUT.panel;
-    const leftX = panel.x + 18;
+    const leftX = panel.x + 20;
+    const startY = panel.y + 36;
+    const chipW = 74;
+    const chipH = 72;
+    const gap = 10;
 
     ctx.save();
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-    // Header
-    ctx.fillStyle = 'rgba(255, 234, 202, 0.52)';
-    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('REWARDS', leftX, panel.y + 18);
-
-    // Reward rows
     REWARD_LEGEND.forEach((reward, index) => {
-      const rowY = panel.y + 42 + index * 52;
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const chipX = leftX + col * (chipW + gap);
+      const chipY = startY + row * (chipH + gap);
 
-      // Row background
-      roundedRectPath(ctx, panel.x + 10, rowY - 4, DIFFICULTY_LAYOUT.dividerX - panel.x - 28, 44, 12);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+      roundedRectPath(ctx, chipX, chipY, chipW, chipH, 16);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
       ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 241, 222, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Icon circle
       ctx.fillStyle = reward.color;
       ctx.beginPath();
-      ctx.arc(leftX + 16, rowY + 16, 14, 0, Math.PI * 2);
+      ctx.arc(chipX + chipW / 2, chipY + 24, 16, 0, Math.PI * 2);
       ctx.fill();
 
-      // Darker overlay for icon contrast
       ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
       ctx.beginPath();
-      ctx.arc(leftX + 16, rowY + 16, 14, 0, Math.PI * 2);
+      ctx.arc(chipX + chipW / 2, chipY + 24, 16, 0, Math.PI * 2);
       ctx.fill();
 
-      // Canvas-drawn icon
-      this.drawRewardIcon(ctx, leftX + 16, rowY + 16, index);
+      this.drawRewardIcon(ctx, chipX + chipW / 2, chipY + 24, index);
 
-      // Label
       ctx.fillStyle = 'rgba(255, 248, 238, 0.9)';
-      ctx.font = 'bold 12px "Trebuchet MS", "Segoe UI", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(reward.label, leftX + 36, rowY + 4);
-
-      // Detail
-      ctx.fillStyle = 'rgba(255, 239, 221, 0.56)';
-      ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-      ctx.fillText(reward.detail, leftX + 36, rowY + 20);
+      ctx.font = '700 10px "Trebuchet MS", "Segoe UI", sans-serif';
+      ctx.fillText(reward.label, chipX + chipW / 2, chipY + 52);
     });
 
     ctx.restore();
@@ -627,17 +537,6 @@ export class DifficultySelectScene implements Scene {
   }
 
   private renderDifficultyGrid(ctx: CanvasRenderingContext2D): void {
-    const panel = DIFFICULTY_LAYOUT.panel;
-    const rightX = DIFFICULTY_LAYOUT.dividerX + 20;
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(255, 235, 205, 0.5)';
-    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('SELECT DIFFICULTY', rightX, panel.y + 18);
-    ctx.restore();
-
     this.diffButtons.forEach((btn, index) => {
       this.renderDifficultyCard(ctx, btn, DIFFICULTY_META[index], index);
     });
@@ -726,27 +625,17 @@ export class DifficultySelectScene implements Scene {
     // Canvas-drawn difficulty icon
     this.drawDifficultyIcon(ctx, btn.x + 29, btn.y + btn.h / 2 + lift, index);
 
-    // Kicker badge
-    roundedRectPath(ctx, btn.x + btn.w - 78, btn.y + 10 + lift, 60, 18, 9);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255, 243, 224, 0.76)';
-    ctx.font = '700 8px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(meta.kicker, btn.x + btn.w - 48, btn.y + 19 + lift);
-
     // Label
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = meta.textColor;
     ctx.font = 'bold 18px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText(meta.label, btn.x + 58, btn.y + 32 + lift);
+    ctx.fillText(meta.label, btn.x + 58, btn.y + 30 + lift);
 
     // Description
     ctx.fillStyle = 'rgba(255, 242, 224, 0.68)';
     ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText(meta.description, btn.x + 58, btn.y + 54 + lift);
+    ctx.fillText(meta.description, btn.x + 58, btn.y + 50 + lift);
 
     ctx.restore();
   }
@@ -793,34 +682,33 @@ export class DifficultySelectScene implements Scene {
     ctx.restore();
   }
 
-  private renderBackButton(ctx: CanvasRenderingContext2D): void {
+  private renderFooter(ctx: CanvasRenderingContext2D): void {
+    drawGlassPanel(ctx, DIFFICULTY_LAYOUT.footer, {
+      radius: 20,
+      accent: 'rgba(255, 224, 180, 0.08)',
+    });
+
     drawButton(ctx, this.backButton, {
-      label: 'Back To Menu',
+      label: 'Back to Menu',
       leadingIcon: '←',
       tone: 'slate',
       hovered: pointInRect(this.mouseX, this.mouseY, this.backButton),
       selected: this.selectedIndex === 4,
       compact: true,
-      radius: 14,
+      radius: 16,
     });
-  }
 
-  private renderControlHints(ctx: CanvasRenderingContext2D): void {
-    const pills = DIFFICULTY_LAYOUT.controlPills;
-    const labels = [
-      { header: 'MOVE', detail: 'Tab · Arrows' },
-      { header: 'SELECT', detail: 'Enter · Space' },
-    ];
-
-    pills.forEach((pill, i) => {
-      drawControlPill(
-        ctx,
-        pill,
-        labels[i].header,
-        labels[i].detail,
-        'rgba(255, 235, 210, 0.14)',
-      );
-    });
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 239, 221, 0.62)';
+    ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      'Arrows or Tab to browse • Enter or Space to start',
+      DIFFICULTY_LAYOUT.footer.x + 232,
+      DIFFICULTY_LAYOUT.footer.y + DIFFICULTY_LAYOUT.footer.h / 2,
+    );
+    ctx.restore();
   }
 
   private drawPanelShell(ctx: CanvasRenderingContext2D, rect: ButtonRect): void {

@@ -34,6 +34,10 @@ function toCanvasCoords(
   };
 }
 
+function toTitleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export class GameOverScene implements Scene {
   private readonly score: number;
   private readonly isHighScore: boolean;
@@ -78,12 +82,12 @@ export class GameOverScene implements Scene {
     this.difficulty = difficulty;
     this.level = level;
 
-    const btnW = 186;
+    const btnW = 198;
     const btnH = 52;
     const gap = 20;
     const totalW = btnW * 2 + gap;
     const startX = GAME_WIDTH / 2 - totalW / 2;
-    const btnY = 308;
+    const btnY = 318;
 
     this.retryButton = { x: startX, y: btnY, w: btnW, h: btnH };
     this.menuButton = { x: startX + btnW + gap, y: btnY, w: btnW, h: btnH };
@@ -192,7 +196,7 @@ export class GameOverScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    const panel = { x: GAME_WIDTH / 2 - 220, y: GAME_HEIGHT / 2 - 165, w: 440, h: 330 };
+    const panel = { x: GAME_WIDTH / 2 - 228, y: GAME_HEIGHT / 2 - 162, w: 456, h: 324 };
     const title =
       this.mode === 'story' && this.level !== undefined
         ? `Level ${this.level} Failed`
@@ -206,33 +210,13 @@ export class GameOverScene implements Scene {
     });
     drawSceneTitle(ctx, {
       x: GAME_WIDTH / 2,
-      y: panel.y + 56,
-      eyebrow: this.isHighScore ? 'NEW RECORD' : 'RUN ENDED',
+      y: panel.y + 54,
       title,
-      width: 320,
+      width: 340,
     });
 
-    this.renderScoreCard(ctx, panel.y + 104);
-
-    if (this.isHighScore && this.scoreAnimDone) {
-      ctx.fillStyle = '#f7d28d';
-      ctx.font = '700 18px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('STAR SCORE ACHIEVED', GAME_WIDTH / 2, panel.y + 214);
-    }
-
-    const info =
-      this.mode === 'infinite' && this.difficulty
-        ? `Infinite • ${this.difficulty.charAt(0).toUpperCase() + this.difficulty.slice(1)}`
-        : this.mode === 'story' && this.level !== undefined
-          ? `Story • Level ${this.level}`
-          : this.mode;
-    ctx.fillStyle = GRAPHICS_THEME.text.muted;
-    ctx.font = GRAPHICS_THEME.fonts.body;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(info, GAME_WIDTH / 2, panel.y + 244);
+    this.renderScoreCard(ctx, panel.y + 112);
+    this.renderInfoChip(ctx, panel.y + 228);
 
     drawButton(ctx, this.retryButton, {
       label: 'Retry',
@@ -242,7 +226,7 @@ export class GameOverScene implements Scene {
       selected: this.selectedIndex === 0,
     });
     drawButton(ctx, this.menuButton, {
-      label: 'Menu',
+      label: 'Back to Menu',
       leadingIcon: '⌂',
       tone: 'slate',
       hovered: pointInRect(this.mouseX, this.mouseY, this.menuButton),
@@ -284,6 +268,39 @@ export class GameOverScene implements Scene {
     ctx.fillStyle = grad;
     ctx.fillText(`${this.displayScore}`, GAME_WIDTH / 2, y + 56);
     ctx.restore();
+  }
+
+  private renderInfoChip(ctx: CanvasRenderingContext2D, y: number): void {
+    const text = this.getInfoChipText();
+
+    ctx.save();
+    ctx.font = '600 12px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
+    const width = Math.max(196, Math.min(320, ctx.measureText(text).width + 34));
+    const rect = { x: GAME_WIDTH / 2 - width / 2, y, w: width, h: 30 };
+
+    roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, 15);
+    ctx.fillStyle = this.isHighScore ? 'rgba(245, 206, 117, 0.16)' : 'rgba(96, 116, 255, 0.12)';
+    ctx.fill();
+    ctx.strokeStyle = this.isHighScore ? 'rgba(245, 206, 117, 0.28)' : 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = GRAPHICS_THEME.text.secondary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, GAME_WIDTH / 2, rect.y + rect.h / 2);
+    ctx.restore();
+  }
+
+  private getInfoChipText(): string {
+    const modeText =
+      this.mode === 'infinite' && this.difficulty
+        ? `Infinite • ${toTitleCase(this.difficulty)}`
+        : this.mode === 'story' && this.level !== undefined
+          ? `Story • Level ${this.level}`
+          : toTitleCase(this.mode);
+
+    return this.isHighScore ? `New Best • ${modeText}` : modeText;
   }
 
   private activateSelected(): void {

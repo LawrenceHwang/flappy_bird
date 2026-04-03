@@ -74,12 +74,12 @@ export class LevelCompleteScene implements Scene {
     this.onMenu = onMenu;
     this.isVictory = level >= MAX_LEVEL;
 
-    const btnW = 186;
+    const btnW = 198;
     const btnH = 52;
     const gap = 20;
     const totalW = btnW * 2 + gap;
     const startX = GAME_WIDTH / 2 - totalW / 2;
-    const btnY = 308;
+    const btnY = 318;
 
     this.primaryButton = { x: startX, y: btnY, w: btnW, h: btnH };
     this.menuButton = { x: startX + btnW + gap, y: btnY, w: btnW, h: btnH };
@@ -188,7 +188,7 @@ export class LevelCompleteScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    const panel = { x: GAME_WIDTH / 2 - 228, y: GAME_HEIGHT / 2 - 170, w: 456, h: 336 };
+    const panel = { x: GAME_WIDTH / 2 - 228, y: GAME_HEIGHT / 2 - 162, w: 456, h: 324 };
 
     ctx.fillStyle = 'rgba(6, 9, 22, 0.7)';
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -196,39 +196,16 @@ export class LevelCompleteScene implements Scene {
     drawGlassPanel(ctx, panel, {
       accent: this.isVictory ? 'rgba(245, 206, 117, 0.18)' : 'rgba(74, 223, 186, 0.14)',
     });
-    this.renderStar(ctx, GAME_WIDTH / 2, panel.y - 8);
 
-    if (this.isVictory) {
-      drawSceneTitle(ctx, {
-        x: GAME_WIDTH / 2,
-        y: panel.y + 48,
-        eyebrow: 'GRAND FINALE',
-        title: 'Victory!',
-        width: 250,
-      });
+    drawSceneTitle(ctx, {
+      x: GAME_WIDTH / 2,
+      y: panel.y + 54,
+      title: this.isVictory ? 'Victory!' : `Level ${this.level} Complete`,
+      width: this.isVictory ? 250 : 340,
+    });
 
-      ctx.fillStyle = GRAPHICS_THEME.text.secondary;
-      ctx.font = '600 16px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText("You've mastered the full story run.", GAME_WIDTH / 2, panel.y + 84);
-    } else {
-      drawSceneTitle(ctx, {
-        x: GAME_WIDTH / 2,
-        y: panel.y + 52,
-        eyebrow: 'STORY MODE',
-        title: `Level ${this.level} Complete`,
-        width: 340,
-      });
-    }
-
-    this.renderScoreCard(ctx, panel.y + 110);
-
-    ctx.fillStyle = GRAPHICS_THEME.text.muted;
-    ctx.font = GRAPHICS_THEME.fonts.body;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`Level ${this.level} of ${MAX_LEVEL}`, GAME_WIDTH / 2, panel.y + 234);
+    this.renderScoreCard(ctx, panel.y + 112);
+    this.renderInfoChip(ctx, panel.y + 228);
 
     drawButton(ctx, this.primaryButton, {
       label: this.isVictory ? 'Play Again' : 'Next Level',
@@ -238,7 +215,7 @@ export class LevelCompleteScene implements Scene {
       selected: this.selectedIndex === 0,
     });
     drawButton(ctx, this.menuButton, {
-      label: 'Menu',
+      label: 'Back to Menu',
       leadingIcon: '⌂',
       tone: 'slate',
       hovered: pointInRect(this.mouseX, this.mouseY, this.menuButton),
@@ -282,26 +259,25 @@ export class LevelCompleteScene implements Scene {
     ctx.restore();
   }
 
-  private renderStar(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
-    const scale = 0.84 + 0.18 * Math.sin(this.elapsed * 3);
-    const rotation = this.elapsed * 0.5;
+  private renderInfoChip(ctx: CanvasRenderingContext2D, y: number): void {
+    const text = this.isVictory ? `Story Complete • ${MAX_LEVEL}/${MAX_LEVEL}` : `Story • Level ${this.level} of ${MAX_LEVEL}`;
 
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotation);
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#f5cf7b';
-    ctx.shadowColor = 'rgba(245, 207, 123, 0.62)';
-    ctx.shadowBlur = 18;
+    ctx.font = '600 12px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
+    const width = Math.max(206, Math.min(320, ctx.measureText(text).width + 34));
+    const rect = { x: GAME_WIDTH / 2 - width / 2, y, w: width, h: 30 };
 
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-      if (i === 0) ctx.moveTo(Math.cos(angle) * 22, Math.sin(angle) * 22);
-      else ctx.lineTo(Math.cos(angle) * 22, Math.sin(angle) * 22);
-    }
-    ctx.closePath();
+    roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, 15);
+    ctx.fillStyle = this.isVictory ? 'rgba(245, 206, 117, 0.16)' : 'rgba(74, 223, 186, 0.12)';
     ctx.fill();
+    ctx.strokeStyle = this.isVictory ? 'rgba(245, 206, 117, 0.28)' : 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = GRAPHICS_THEME.text.secondary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, GAME_WIDTH / 2, rect.y + rect.h / 2);
     ctx.restore();
   }
 

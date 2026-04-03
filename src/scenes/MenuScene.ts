@@ -1,7 +1,7 @@
 import { AudioManager } from '../audio/AudioManager';
 import { Background } from '../entities/Background';
 import { Bird } from '../entities/Bird';
-import { drawControlPill, drawGlassPanel, drawIconToggle } from '../graphics/ui-kit';
+import { drawGlassPanel, drawIconToggle, roundedRectPath } from '../graphics/ui-kit';
 import { ScoreManager } from '../storage/ScoreManager';
 import { COLORS } from '../utils/colors';
 import {
@@ -11,7 +11,6 @@ import {
   GAME_WIDTH,
   GROUND_HEIGHT,
 } from '../utils/constants';
-import { easeInOutSine } from '../utils/math';
 import type { BirdSkin, InputAction, Scene } from '../utils/types';
 
 /* ------------------------------------------------------------------ */
@@ -25,23 +24,14 @@ interface ButtonRect {
   h: number;
 }
 
-interface ControlHint extends ButtonRect {
-  label: string;
-  detail: string;
-  accent: string;
-}
-
 interface MenuLayout {
-  scoreChip: ButtonRect;
-  eyebrowY: number;
   titleY: number;
   birdCenter: { x: number; y: number };
   bird: { x: number; y: number };
   skinButton: ButtonRect;
-  skinHintY: number;
   actionPanel: ButtonRect;
   buttons: readonly ButtonRect[];
-  controlPills: readonly ControlHint[];
+  footerChip: ButtonRect;
   soundButton: ButtonRect;
 }
 
@@ -72,27 +62,6 @@ function toCanvasCoords(
   };
 }
 
-function roundedRectPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 const AVAILABLE_SKINS: readonly BirdSkin[] = ['default', 'bee'];
 
 /** Bird rendered at this scale on the menu for prominence. */
@@ -100,15 +69,15 @@ const MENU_BIRD_SCALE = 1.95;
 
 function createMenuLayout(): MenuLayout {
   /* Centered composition: bird on left, action panel on right */
-  const panelW = 340;
-  const panelH = 280;
+  const panelW = 348;
+  const panelH = 304;
   const birdAreaW = 160;
   const gap = 28;
-  const totalW = birdAreaW + gap + panelW; // 528
-  const startX = Math.round((GAME_WIDTH - totalW) / 2); // 136
+  const totalW = birdAreaW + gap + panelW;
+  const startX = Math.round((GAME_WIDTH - totalW) / 2);
 
   /* Vertical centering: content zone between header and ground */
-  const contentTop = 88;
+  const contentTop = 96;
   const contentBottom = GAME_HEIGHT - GROUND_HEIGHT - 8; // 392
   const contentCenterY = Math.round((contentTop + contentBottom) / 2); // 240
 
@@ -118,22 +87,24 @@ function createMenuLayout(): MenuLayout {
   };
   const actionPanel = {
     x: startX + birdAreaW + gap,
-    y: Math.round(contentCenterY - panelH / 2),
+    y: Math.round(contentCenterY - panelH / 2) + 4,
     w: panelW,
     h: panelH,
   };
   const buttonInset = 18;
   const buttonWidth = actionPanel.w - buttonInset * 2;
-  const buttonHeight = 56;
-  const buttonTop = actionPanel.y + 76;
-  const controlWidth = Math.floor((buttonWidth - 14) / 2);
-  const controlY = actionPanel.y + panelH - 48;
-
-  const skinButtonY = birdCenter.y + 62;
+  const buttonHeight = 54;
+  const buttonGap = 12;
+  const buttonTop = actionPanel.y + 84;
+  const footerChip = {
+    x: actionPanel.x + buttonInset,
+    y: actionPanel.y + panelH - 56,
+    w: buttonWidth,
+    h: 40,
+  };
+  const skinButtonY = birdCenter.y + 72;
 
   return {
-    scoreChip: { x: 36, y: 16, w: 216, h: 68 },
-    eyebrowY: 0,
     titleY: 50,
     birdCenter,
     bird: {
@@ -141,37 +112,22 @@ function createMenuLayout(): MenuLayout {
       y: Math.round(birdCenter.y - BIRD_HEIGHT / 2),
     },
     skinButton: {
-      x: Math.round(birdCenter.x - 76),
+      x: Math.round(birdCenter.x - 82),
       y: skinButtonY,
-      w: 152,
-      h: 40,
+      w: 164,
+      h: 48,
     },
-    skinHintY: skinButtonY + 46,
     actionPanel,
     buttons: [
       { x: actionPanel.x + buttonInset, y: buttonTop, w: buttonWidth, h: buttonHeight },
-      { x: actionPanel.x + buttonInset, y: buttonTop + buttonHeight + 14, w: buttonWidth, h: buttonHeight },
-    ],
-    controlPills: [
       {
         x: actionPanel.x + buttonInset,
-        y: controlY,
-        w: controlWidth,
-        h: 32,
-        label: 'Move',
-        detail: 'Tab • Arrow Keys',
-        accent: 'rgba(142, 184, 255, 0.42)',
-      },
-      {
-        x: actionPanel.x + buttonInset + controlWidth + 14,
-        y: controlY,
-        w: buttonWidth - controlWidth - 14,
-        h: 32,
-        label: 'Select',
-        detail: 'Space • Enter',
-        accent: 'rgba(244, 207, 148, 0.42)',
+        y: buttonTop + buttonHeight + buttonGap,
+        w: buttonWidth,
+        h: buttonHeight,
       },
     ],
+    footerChip,
     soundButton: { x: 720, y: 20, w: 46, h: 46 },
   };
 }
@@ -185,8 +141,8 @@ const MENU_LAYOUT = createMenuLayout();
 /**
  * Main menu rendered entirely on Canvas.
  *
- * Displays an animated bird, title, two mode buttons, high-score info,
- * a pulsing hint, and a sound toggle.
+ * Displays an animated bird, clean mode choices, a footer summary,
+ * and a sound toggle.
  */
 export class MenuScene implements Scene {
   private readonly onStartStory: () => void;
@@ -382,17 +338,14 @@ export class MenuScene implements Scene {
     // Mode buttons
     this.renderButtons(ctx);
 
-    // Control hints
-    this.renderControlHints(ctx);
-
     // Animated bird (hero scale)
     this.renderBird(ctx);
 
     // Skin quick-switch
     this.renderSkinButton(ctx);
 
-    // High score
-    this.renderHighScore(ctx);
+    // Footer summary
+    this.renderFooterSummary(ctx);
 
     // Sound toggle
     this.renderSoundToggle(ctx);
@@ -563,12 +516,6 @@ export class MenuScene implements Scene {
       ctx.shadowBlur = 14;
     }
 
-    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 238, 206, 0.6)';
-    ctx.fillText('PLUMAGE', pillCx, this.skinButton.y - 12);
-
     roundedRectPath(ctx, this.skinButton.x, this.skinButton.y, this.skinButton.w, this.skinButton.h, 18);
     const fill = ctx.createLinearGradient(this.skinButton.x, this.skinButton.y, this.skinButton.x, this.skinButton.y + this.skinButton.h);
     fill.addColorStop(0, 'rgba(37, 31, 62, 0.78)');
@@ -602,12 +549,15 @@ export class MenuScene implements Scene {
     this.drawChevron(ctx, rightWingletX - 1, pillCy, 'right');
 
     ctx.fillStyle = COLORS.ui.text;
-    ctx.font = 'bold 14px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText(skinLabel, pillCx, pillCy - 1);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 9px "Trebuchet MS", "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255, 236, 206, 0.56)';
+    ctx.fillText('SKIN', pillCx, this.skinButton.y + 14);
 
-    ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillStyle = 'rgba(255, 243, 223, 0.5)';
-    ctx.fillText('Press S or tap to swap', pillCx, MENU_LAYOUT.skinHintY);
+    ctx.fillStyle = COLORS.ui.text;
+    ctx.font = 'bold 14px "Trebuchet MS", "Segoe UI", sans-serif';
+    ctx.fillText(skinLabel, pillCx, pillCy + 7);
 
     ctx.restore();
   }
@@ -800,63 +750,40 @@ export class MenuScene implements Scene {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 234, 206, 0.5)';
-    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('PLAY MODES', panel.x + panel.w / 2, panel.y + 22);
     ctx.fillStyle = 'rgba(255, 247, 230, 0.9)';
     ctx.font = 'bold 22px Georgia, Cambria, "Times New Roman", serif';
-    ctx.fillText('Choose a Flight Path', panel.x + panel.w / 2, panel.y + 44);
+    ctx.fillText('Choose a Flight Path', panel.x + panel.w / 2, panel.y + 32);
     ctx.fillStyle = 'rgba(255, 242, 226, 0.58)';
     ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('Curated journey or endless score.', panel.x + panel.w / 2, panel.y + 62);
+    ctx.fillText('Story adventure or endless score chase.', panel.x + panel.w / 2, panel.y + 52);
     ctx.restore();
   }
 
-  private renderHighScore(ctx: CanvasRenderingContext2D): void {
+  private renderFooterSummary(ctx: CanvasRenderingContext2D): void {
     const storyBest = ScoreManager.getHighScore('story');
     const infiniteBest = ScoreManager.getHighScore('infinite');
-
-    const chip = MENU_LAYOUT.scoreChip;
+    const chip = MENU_LAYOUT.footerChip;
 
     ctx.save();
     roundedRectPath(ctx, chip.x, chip.y, chip.w, chip.h, 18);
     const fill = ctx.createLinearGradient(chip.x, chip.y, chip.x, chip.y + chip.h);
-    fill.addColorStop(0, 'rgba(30, 25, 52, 0.74)');
-    fill.addColorStop(1, 'rgba(19, 16, 35, 0.82)');
+    fill.addColorStop(0, 'rgba(21, 24, 44, 0.7)');
+    fill.addColorStop(1, 'rgba(14, 18, 34, 0.82)');
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 232, 202, 0.16)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255, 233, 197, 0.68)';
-    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.textAlign = 'left';
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('HIGH SCORES', chip.x + 16, chip.y + 12);
-
-    ctx.strokeStyle = 'rgba(255, 233, 197, 0.08)';
-    ctx.beginPath();
-    ctx.moveTo(chip.x + chip.w / 2, chip.y + 30);
-    ctx.lineTo(chip.x + chip.w / 2, chip.y + chip.h - 10);
-    ctx.stroke();
-
-    const storyLabelX = chip.x + 18;
-    const infiniteLabelX = chip.x + chip.w / 2 + 14;
-    ctx.fillStyle = 'rgba(255, 239, 221, 0.56)';
-    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillText('Story', storyLabelX, chip.y + 30);
-    ctx.fillText('Infinite', infiniteLabelX, chip.y + 30);
-
     ctx.fillStyle = COLORS.ui.text;
-    ctx.font = 'bold 17px Georgia, Cambria, "Times New Roman", serif';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${storyBest}`, storyLabelX, chip.y + 54);
-    ctx.fillText(`${infiniteBest}`, infiniteLabelX, chip.y + 54);
+    ctx.font = '700 12px "Trebuchet MS", "Segoe UI", sans-serif';
+    ctx.fillText(`Story ${storyBest} • Infinite ${infiniteBest}`, chip.x + chip.w / 2, chip.y + 9);
 
-    const accentX = chip.x + chip.w - 18;
-    ctx.fillStyle = 'rgba(245, 203, 124, 0.82)';
-    this.drawStar(ctx, accentX, chip.y + 18, 6, 2.6);
+    ctx.fillStyle = 'rgba(255, 239, 221, 0.58)';
+    ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
+    ctx.fillText('Arrows or Tab to move • Enter or Space to play', chip.x + chip.w / 2, chip.y + 24);
     ctx.restore();
   }
 
@@ -914,24 +841,11 @@ export class MenuScene implements Scene {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(MENU_LAYOUT.actionPanel.x + 24, MENU_LAYOUT.actionPanel.y + MENU_LAYOUT.actionPanel.h - 62);
-    ctx.lineTo(MENU_LAYOUT.actionPanel.x + MENU_LAYOUT.actionPanel.w - 24, MENU_LAYOUT.actionPanel.y + MENU_LAYOUT.actionPanel.h - 62);
-    ctx.moveTo(MENU_LAYOUT.actionPanel.x + 24, MENU_LAYOUT.actionPanel.y + 38);
-    ctx.lineTo(MENU_LAYOUT.actionPanel.x + MENU_LAYOUT.actionPanel.w - 24, MENU_LAYOUT.actionPanel.y + 38);
+    ctx.moveTo(MENU_LAYOUT.actionPanel.x + 24, MENU_LAYOUT.actionPanel.y + 68);
+    ctx.lineTo(MENU_LAYOUT.actionPanel.x + MENU_LAYOUT.actionPanel.w - 24, MENU_LAYOUT.actionPanel.y + 68);
+    ctx.moveTo(MENU_LAYOUT.actionPanel.x + 24, MENU_LAYOUT.footerChip.y - 12);
+    ctx.lineTo(MENU_LAYOUT.actionPanel.x + MENU_LAYOUT.actionPanel.w - 24, MENU_LAYOUT.footerChip.y - 12);
     ctx.stroke();
-  }
-
-  private renderControlHints(ctx: CanvasRenderingContext2D): void {
-    MENU_LAYOUT.controlPills.forEach((pill) => {
-      const pulse = 0.1 + 0.18 * (0.55 + 0.45 * easeInOutSine((this.elapsed * 0.8) % 1));
-      drawControlPill(
-        ctx,
-        pill,
-        pill.label.toUpperCase(),
-        pill.detail,
-        pill.accent.replace('0.42', `${pulse}`),
-      );
-    });
   }
 
   private initSoilDecorations(): void {

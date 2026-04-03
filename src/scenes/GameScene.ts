@@ -133,6 +133,7 @@ export class GameScene implements Scene {
   private onMouseMove: ((e: MouseEvent) => void) | null = null;
   private onMouseClick: ((e: MouseEvent) => void) | null = null;
   private onTouchStart: ((e: TouchEvent) => void) | null = null;
+  private onKeyDown: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(
     mode: GameMode,
@@ -398,7 +399,9 @@ export class GameScene implements Scene {
     this.renderGround(ctx);
 
     // HUD
-    this.renderHUD(ctx);
+    if (!this.isOverlayActive()) {
+      this.renderHUD(ctx);
+    }
 
     // Overlay states
     if (this.state === 'ready') {
@@ -446,12 +449,18 @@ export class GameScene implements Scene {
   }
 
   private handlePauseInput(action: InputAction): void {
-    if (action === 'pause' || action === 'flap') {
-      // Resume when pressing pause or flap while paused
+    if (action === 'pause') {
+      this.resume();
+      return;
+    }
+
+    if (action === 'confirm' || action === 'flap') {
       if (this.pauseSelectedIndex === 0) {
         this.resume();
       } else if (this.pauseSelectedIndex === 1) {
         this.onGameOver(this.score);
+      } else {
+        AudioManager.getInstance().muted = !AudioManager.getInstance().muted;
       }
     }
   }
@@ -552,22 +561,18 @@ export class GameScene implements Scene {
   }
 
   private renderReadyOverlay(ctx: CanvasRenderingContext2D): void {
-    const panel = { x: GAME_WIDTH / 2 - 168, y: GAME_HEIGHT / 2 - 54, w: 336, h: 118 };
+    const panel = { x: GAME_WIDTH / 2 - 174, y: GAME_HEIGHT / 2 - 46, w: 348, h: 96 };
     drawGlassPanel(ctx, panel, { accent: 'rgba(96, 116, 255, 0.12)' });
 
     ctx.font = '700 28px Georgia, Cambria, "Times New Roman", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.ui.text;
-    ctx.fillText('Ready for Takeoff?', GAME_WIDTH / 2, panel.y + 36);
+    ctx.fillText('Ready for Takeoff?', GAME_WIDTH / 2, panel.y + 34);
 
     ctx.font = '600 14px "Trebuchet MS", "Segoe UI", sans-serif';
     ctx.fillStyle = 'rgba(255, 245, 230, 0.9)';
-    ctx.fillText('Space  •  Enter  •  Click  •  Tap', GAME_WIDTH / 2, panel.y + 68);
-
-    ctx.font = '600 11px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.fillStyle = 'rgba(255, 236, 206, 0.66)';
-    ctx.fillText('Launch begins with a 3-2-1 countdown', GAME_WIDTH / 2, panel.y + 92);
+    ctx.fillText('Press Space, Enter, click, or tap to launch', GAME_WIDTH / 2, panel.y + 64);
   }
 
   private renderCountdownOverlay(ctx: CanvasRenderingContext2D): void {
@@ -590,16 +595,28 @@ export class GameScene implements Scene {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    const panel = { x: GAME_WIDTH / 2 - 116, y: GAME_HEIGHT / 2 - 10, w: 232, h: 56 };
-    drawGlassPanel(ctx, panel, { accent: 'rgba(255, 177, 140, 0.12)' });
+    const panel = {
+      x: GAME_WIDTH / 2 - 154,
+      y: GAME_HEIGHT - GROUND_HEIGHT - 54,
+      w: 308,
+      h: 40,
+    };
+    drawGlassPanel(ctx, panel, {
+      radius: 20,
+      accent: 'rgba(255, 177, 140, 0.12)',
+    });
 
-    ctx.font = '700 20px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
+    ctx.font = '700 14px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.ui.text;
     ctx.globalAlpha = 0.72 + 0.28 * Math.sin(Date.now() / 400);
-    ctx.fillText('Tap to continue', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 18);
+    ctx.fillText('Tap, click, or press Enter to continue', GAME_WIDTH / 2, panel.y + panel.h / 2);
     ctx.globalAlpha = 1;
+  }
+
+  private isOverlayActive(): boolean {
+    return this.paused || this.state === 'ready' || this.state === 'countdown' || this.state === 'dead';
   }
 
   private renderGround(ctx: CanvasRenderingContext2D): void {
@@ -686,18 +703,39 @@ export class GameScene implements Scene {
       this.handleFlap();
     };
 
+    this.onKeyDown = (e: KeyboardEvent) => {
+      if (!this.paused) return;
+
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          e.preventDefault();
+          this.pauseSelectedIndex = (this.pauseSelectedIndex + 2) % 3;
+          break;
+        case 'ArrowDown':
+        case 'ArrowRight':
+        case 'Tab':
+          e.preventDefault();
+          this.pauseSelectedIndex = (this.pauseSelectedIndex + 1) % 3;
+          break;
+      }
+    };
+
     this.canvas.addEventListener('mousemove', this.onMouseMove);
     this.canvas.addEventListener('click', this.onMouseClick);
     this.canvas.addEventListener('touchstart', this.onTouchStart, { passive: false });
+    document.addEventListener('keydown', this.onKeyDown);
   }
 
   private unregisterListeners(): void {
     if (this.canvas && this.onMouseMove) this.canvas.removeEventListener('mousemove', this.onMouseMove);
     if (this.canvas && this.onMouseClick) this.canvas.removeEventListener('click', this.onMouseClick);
     if (this.canvas && this.onTouchStart) this.canvas.removeEventListener('touchstart', this.onTouchStart);
+    if (this.onKeyDown) document.removeEventListener('keydown', this.onKeyDown);
 
     this.onMouseMove = null;
     this.onMouseClick = null;
     this.onTouchStart = null;
+    this.onKeyDown = null;
   }
 }
