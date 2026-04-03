@@ -1,6 +1,7 @@
 import { AudioManager } from '../audio/AudioManager';
 import { Background } from '../entities/Background';
 import { Bird } from '../entities/Bird';
+import { drawControlPill, drawGlassPanel, drawIconToggle } from '../graphics/ui-kit';
 import { ScoreManager } from '../storage/ScoreManager';
 import { COLORS } from '../utils/colors';
 import {
@@ -878,60 +879,12 @@ export class MenuScene implements Scene {
   private renderSoundToggle(ctx: CanvasRenderingContext2D): void {
     const enabled = !AudioManager.getInstance().muted;
     const hovered = pointInRect(this.mouseX, this.mouseY, this.soundButton);
-    const cx = this.soundButton.x + this.soundButton.w / 2;
-    const cy = this.soundButton.y + this.soundButton.h / 2;
-
-    ctx.save();
-    if (hovered) {
-      ctx.shadowColor = enabled ? 'rgba(115, 219, 194, 0.28)' : 'rgba(255, 224, 187, 0.18)';
-      ctx.shadowBlur = 16;
-    }
-
-    roundedRectPath(ctx, this.soundButton.x, this.soundButton.y, this.soundButton.w, this.soundButton.h, 16);
-    const fill = ctx.createLinearGradient(this.soundButton.x, this.soundButton.y, this.soundButton.x, this.soundButton.y + this.soundButton.h);
-    fill.addColorStop(0, enabled ? 'rgba(28, 80, 74, 0.78)' : 'rgba(54, 50, 66, 0.76)');
-    fill.addColorStop(1, enabled ? 'rgba(18, 58, 53, 0.84)' : 'rgba(38, 35, 48, 0.84)');
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = enabled ? 'rgba(203, 252, 239, 0.28)' : 'rgba(255, 235, 205, 0.14)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
-    ctx.beginPath();
-    ctx.rect(cx - 6, cy - 4, 6, 8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 4);
-    ctx.lineTo(cx + 6, cy - 9);
-    ctx.lineTo(cx + 6, cy + 9);
-    ctx.lineTo(cx, cy + 4);
-    ctx.closePath();
-    ctx.fill();
-
-    if (enabled) {
-      // Sound wave arcs
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(cx + 7, cy, 5, -0.8, 0.8);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(cx + 7, cy, 9, -0.6, 0.6);
-      ctx.stroke();
-    } else {
-      // Strike-through line
-      ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cx - 8, cy - 8);
-      ctx.lineTo(cx + 10, cy + 10);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    drawIconToggle(ctx, this.soundButton, {
+      label: enabled ? 'SFX' : 'OFF',
+      tone: enabled ? 'cyan' : 'slate',
+      hovered,
+      selected: hovered,
+    });
   }
 
   /* -------- helpers -------- */
@@ -954,97 +907,30 @@ export class MenuScene implements Scene {
   }
 
   private renderActionPanel(ctx: CanvasRenderingContext2D): void {
-    const panel = MENU_LAYOUT.actionPanel;
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(12, 15, 34, 0.34)';
-    ctx.shadowBlur = 34;
-    ctx.shadowOffsetY = 10;
-
-    roundedRectPath(ctx, panel.x, panel.y, panel.w, panel.h, 24);
-    const fill = ctx.createLinearGradient(panel.x, panel.y, panel.x, panel.y + panel.h);
-    fill.addColorStop(0, 'rgba(25, 24, 52, 0.72)');
-    fill.addColorStop(0.54, 'rgba(23, 23, 47, 0.82)');
-    fill.addColorStop(1, 'rgba(16, 17, 34, 0.88)');
-    ctx.fillStyle = fill;
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-
-    ctx.strokeStyle = 'rgba(255, 239, 214, 0.16)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    roundedRectPath(ctx, panel.x + 2, panel.y + 2, panel.w - 4, panel.h - 4, 22);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.save();
-    roundedRectPath(ctx, panel.x, panel.y, panel.w, panel.h, 24);
-    ctx.clip();
-    const sheen = ctx.createRadialGradient(
-      panel.x + panel.w * 0.28,
-      panel.y + 18,
-      0,
-      panel.x + panel.w * 0.28,
-      panel.y + 18,
-      220,
-    );
-    sheen.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-    sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = sheen;
-    ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
-
-    const footerGlow = ctx.createLinearGradient(panel.x, panel.y + panel.h - 78, panel.x, panel.y + panel.h);
-    footerGlow.addColorStop(0, 'rgba(119, 148, 219, 0.02)');
-    footerGlow.addColorStop(1, 'rgba(97, 134, 211, 0.12)');
-    ctx.fillStyle = footerGlow;
-    ctx.fillRect(panel.x, panel.y + panel.h - 78, panel.w, 78);
-
-    ctx.restore();
+    drawGlassPanel(ctx, MENU_LAYOUT.actionPanel, {
+      accent: 'rgba(111, 150, 242, 0.14)',
+    });
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(panel.x + 24, panel.y + panel.h - 62);
-    ctx.lineTo(panel.x + panel.w - 24, panel.y + panel.h - 62);
-    ctx.moveTo(panel.x + 24, panel.y + 38);
-    ctx.lineTo(panel.x + panel.w - 24, panel.y + 38);
+    ctx.moveTo(MENU_LAYOUT.actionPanel.x + 24, MENU_LAYOUT.actionPanel.y + MENU_LAYOUT.actionPanel.h - 62);
+    ctx.lineTo(MENU_LAYOUT.actionPanel.x + MENU_LAYOUT.actionPanel.w - 24, MENU_LAYOUT.actionPanel.y + MENU_LAYOUT.actionPanel.h - 62);
+    ctx.moveTo(MENU_LAYOUT.actionPanel.x + 24, MENU_LAYOUT.actionPanel.y + 38);
+    ctx.lineTo(MENU_LAYOUT.actionPanel.x + MENU_LAYOUT.actionPanel.w - 24, MENU_LAYOUT.actionPanel.y + 38);
     ctx.stroke();
-
-    ctx.fillStyle = 'rgba(255, 230, 196, 0.28)';
-    ctx.beginPath();
-    ctx.arc(panel.x + 20, panel.y + 20, 2, 0, Math.PI * 2);
-    ctx.arc(panel.x + panel.w - 20, panel.y + 20, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
   }
 
   private renderControlHints(ctx: CanvasRenderingContext2D): void {
-    const pulse = 0.55 + 0.45 * easeInOutSine((this.elapsed * 0.8) % 1);
-
     MENU_LAYOUT.controlPills.forEach((pill) => {
-      ctx.save();
-      roundedRectPath(ctx, pill.x, pill.y, pill.w, pill.h, 14);
-      ctx.fillStyle = 'rgba(17, 19, 39, 0.36)';
-      ctx.fill();
-      ctx.strokeStyle = pill.accent.replace('0.42', `${0.15 + pulse * 0.14}`);
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(255, 239, 212, 0.52)';
-      ctx.font = '600 9px "Trebuchet MS", "Segoe UI", sans-serif';
-      ctx.fillText(pill.label.toUpperCase(), pill.x + 12, pill.y + 7);
-
-      ctx.fillStyle = 'rgba(255, 250, 241, 0.82)';
-      ctx.font = '600 10px "Trebuchet MS", "Segoe UI", sans-serif';
-      ctx.fillText(pill.detail, pill.x + 12, pill.y + 17);
-      ctx.restore();
+      const pulse = 0.1 + 0.18 * (0.55 + 0.45 * easeInOutSine((this.elapsed * 0.8) % 1));
+      drawControlPill(
+        ctx,
+        pill,
+        pill.label.toUpperCase(),
+        pill.detail,
+        pill.accent.replace('0.42', `${pulse}`),
+      );
     });
   }
 

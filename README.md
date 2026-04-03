@@ -1,6 +1,6 @@
 # 🐦 Flappy Bird
 
-A cute, festive Flappy Bird game built as a single-page application with HTML5 Canvas and TypeScript, styled like a chubby bird soaring through a magical kingdom.
+A polished, festive Flappy Bird game built as a single-page application with HTML5 Canvas and TypeScript, styled like a chubby bird soaring through a premium magical kingdom.
 
 ![flappy](./assets/flappy.png)
 
@@ -10,8 +10,8 @@ A cute, festive Flappy Bird game built as a single-page application with HTML5 C
 - **Infinite Mode** — Endless gameplay with 4 difficulty levels (Easy, Medium, Hard, Impossible)
 - **Power-ups** (Infinite Mode) — Multiplier, shield, slow motion, and shrink rewards with pre-run explanations
 - **Bee Skin** — Switch between the default bird and a bee variant directly from the start screen; the selection persists between sessions
-- **Magical Kingdom Visuals** — Chubby crowned bird, enchanted pipes, aurora skies, sparkles, and layered parallax scenery
-- **Editorial Menu Art** — Golden-ratio menu composition, refined glass panels, stronger hierarchy, and a more storybook-dusk presentation across the main menu and difficulty select flow
+- **Premium Storybook Art** — Hand-authored SVG birds, rewards, pipes, and world layers composited in Canvas for a richer top-app-store look
+- **Unified Scene Chrome** — Shared glass panels, premium buttons, richer overlays, and stronger typography across menus, HUD, pause, game over, and level complete flows
 - **Procedural Audio** — All sound effects and background music synthesized via Web Audio API
 - **Responsive** — Scales to the browser's visible area while maintaining aspect ratio
 - **Touch Support** — Tap to flap on mobile devices
@@ -78,6 +78,8 @@ npm run build
 ```text
 src/
 ├── engine/          # Game loop, input, physics, renderer, orchestrator
+├── graphics/        # Shared theme, UI kit, loading splash, and art asset preload
+├── assets/art/      # Shipped SVG art for birds, rewards, pipes, and world layers
 ├── entities/        # Bird, pipes, background, particles, rewards
 ├── scenes/          # Menu, gameplay, game over, level complete, pause
 ├── modes/           # Difficulty configs for story (20 levels) and infinite
@@ -86,6 +88,8 @@ src/
 ├── ui/              # In-game HUD (score, timer, power-ups)
 └── utils/           # Constants, colors, math helpers, types
 ```
+
+The app preloads the compact SVG art pack before `game.start()` so gameplay still begins from a static bundle with no network round-trips after boot.
 
 Additional project documentation lives in `docs/`:
 
@@ -97,7 +101,7 @@ Additional project documentation lives in `docs/`:
 - **TypeScript** — Strict mode, zero `any`
 - **Vite** — Lightning-fast dev server and build
 - **Tailwind CSS v4** — UI overlay styling
-- **HTML5 Canvas** — 60fps game rendering
+- **HTML5 Canvas + SVG Art Pipeline** — 60fps canvas rendering with preloaded shipped art
 - **Web Audio API** — Procedural sound synthesis
 
 ## 📄 License

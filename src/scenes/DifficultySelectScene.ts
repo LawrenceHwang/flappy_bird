@@ -1,4 +1,5 @@
 import { Background } from '../entities/Background';
+import { drawButton, drawControlPill, drawGlassPanel } from '../graphics/ui-kit';
 import { COLORS } from '../utils/colors';
 import { GAME_HEIGHT, GAME_WIDTH } from '../utils/constants';
 import type { Difficulty, InputAction, Scene } from '../utils/types';
@@ -793,52 +794,15 @@ export class DifficultySelectScene implements Scene {
   }
 
   private renderBackButton(ctx: CanvasRenderingContext2D): void {
-    const btn = this.backButton;
-    const hovered = pointInRect(this.mouseX, this.mouseY, btn);
-    const highlight = hovered || this.selectedIndex === 4;
-    const lift = highlight ? -2 : 0;
-
-    ctx.save();
-
-    // Bottom bevel
-    roundedRectPath(ctx, btn.x, btn.y + 3, btn.w, btn.h, 14);
-    ctx.fillStyle = 'rgba(38, 33, 48, 0.88)';
-    ctx.fill();
-
-    // Main face
-    const fill = ctx.createLinearGradient(btn.x, btn.y + lift, btn.x, btn.y + btn.h + lift);
-    fill.addColorStop(0, highlight ? 'rgba(145, 151, 171, 0.88)' : 'rgba(88, 93, 110, 0.84)');
-    fill.addColorStop(1, highlight ? 'rgba(95, 101, 118, 0.92)' : 'rgba(62, 66, 82, 0.92)');
-    roundedRectPath(ctx, btn.x, btn.y + lift, btn.w, btn.h, 14);
-    ctx.fillStyle = fill;
-    ctx.fill();
-
-    // Upper sheen
-    roundedRectPath(ctx, btn.x + 1.5, btn.y + 1 + lift, btn.w - 3, btn.h * 0.42, 13);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fill();
-
-    // Border
-    roundedRectPath(ctx, btn.x, btn.y + lift, btn.w, btn.h, 14);
-    ctx.strokeStyle = highlight ? 'rgba(255, 243, 224, 0.32)' : 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    // Selection ring
-    if (this.selectedIndex === 4) {
-      ctx.strokeStyle = 'rgba(244, 226, 190, 0.55)';
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
-    }
-
-    // Label
-    ctx.fillStyle = '#FEFEFE';
-    ctx.font = 'bold 13px "Trebuchet MS", "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('← Back To Menu', btn.x + btn.w / 2, btn.y + btn.h / 2 + lift);
-
-    ctx.restore();
+    drawButton(ctx, this.backButton, {
+      label: 'Back To Menu',
+      leadingIcon: '←',
+      tone: 'slate',
+      hovered: pointInRect(this.mouseX, this.mouseY, this.backButton),
+      selected: this.selectedIndex === 4,
+      compact: true,
+      radius: 14,
+    });
   }
 
   private renderControlHints(ctx: CanvasRenderingContext2D): void {
@@ -848,98 +812,20 @@ export class DifficultySelectScene implements Scene {
       { header: 'SELECT', detail: 'Enter · Space' },
     ];
 
-    ctx.save();
     pills.forEach((pill, i) => {
-      roundedRectPath(ctx, pill.x, pill.y, pill.w, pill.h, 11);
-      ctx.fillStyle = 'rgba(17, 19, 39, 0.4)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 235, 210, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(255, 239, 212, 0.5)';
-      ctx.font = '600 8px "Trebuchet MS", "Segoe UI", sans-serif';
-      ctx.fillText(labels[i].header, pill.x + 10, pill.y + 3);
-
-      ctx.fillStyle = 'rgba(255, 250, 241, 0.72)';
-      ctx.font = '600 9.5px "Trebuchet MS", "Segoe UI", sans-serif';
-      ctx.fillText(labels[i].detail, pill.x + 10, pill.y + 12);
+      drawControlPill(
+        ctx,
+        pill,
+        labels[i].header,
+        labels[i].detail,
+        'rgba(255, 235, 210, 0.14)',
+      );
     });
-    ctx.restore();
   }
 
   private drawPanelShell(ctx: CanvasRenderingContext2D, rect: ButtonRect): void {
-    ctx.save();
-    ctx.shadowColor = 'rgba(11, 14, 34, 0.32)';
-    ctx.shadowBlur = 28;
-    ctx.shadowOffsetY = 10;
-
-    roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, 22);
-    const fill = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h);
-    fill.addColorStop(0, 'rgba(28, 26, 50, 0.74)');
-    fill.addColorStop(0.5, 'rgba(22, 21, 44, 0.82)');
-    fill.addColorStop(1, 'rgba(16, 17, 34, 0.88)');
-    ctx.fillStyle = fill;
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-
-    // Outer border
-    ctx.strokeStyle = 'rgba(255, 239, 214, 0.16)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Inner border
-    roundedRectPath(ctx, rect.x + 2, rect.y + 2, rect.w - 4, rect.h - 4, 20);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Upper sheen
-    ctx.save();
-    roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, 22);
-    ctx.clip();
-    const sheen = ctx.createRadialGradient(
-      rect.x + rect.w * 0.28, rect.y + 14, 0,
-      rect.x + rect.w * 0.28, rect.y + 14, 220,
-    );
-    sheen.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-    sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = sheen;
-    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    ctx.restore();
-
-    // Footer glow
-    ctx.save();
-    roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, 22);
-    ctx.clip();
-    const footerGlow = ctx.createLinearGradient(
-      rect.x, rect.y + rect.h - 30, rect.x, rect.y + rect.h,
-    );
-    footerGlow.addColorStop(0, 'rgba(255, 224, 180, 0)');
-    footerGlow.addColorStop(1, 'rgba(255, 224, 180, 0.04)');
-    ctx.fillStyle = footerGlow;
-    ctx.fillRect(rect.x, rect.y + rect.h - 30, rect.w, 30);
-    ctx.restore();
-
-    // Corner dots (decorative)
-    const dotInset = 12;
-    ctx.fillStyle = 'rgba(255, 232, 196, 0.12)';
-    const corners: [number, number][] = [
-      [rect.x + dotInset, rect.y + dotInset],
-      [rect.x + rect.w - dotInset, rect.y + dotInset],
-      [rect.x + dotInset, rect.y + rect.h - dotInset],
-      [rect.x + rect.w - dotInset, rect.y + rect.h - dotInset],
-    ];
-    for (const [x, y] of corners) {
-      ctx.beginPath();
-      ctx.arc(x, y, 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
+    drawGlassPanel(ctx, rect, {
+      accent: 'rgba(255, 224, 180, 0.06)',
+    });
   }
 }

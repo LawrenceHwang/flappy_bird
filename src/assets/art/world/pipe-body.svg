@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 256">
+  <defs>
+    <linearGradient id="body" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2f4a5d"/>
+      <stop offset="28%" stop-color="#4f7189"/>
+      <stop offset="62%" stop-color="#7fa7bc"/>
+      <stop offset="100%" stop-color="#385062"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d7ecf8" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="#d7ecf8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="0" width="76" height="256" rx="10" fill="url(#body)" stroke="#20303d" stroke-width="4"/>
+  <rect x="18" y="6" width="12" height="244" rx="6" fill="url(#edge)"/>
+  <g opacity=".35" stroke="#9dc3d8" stroke-width="2">
+    <path d="M26 34h44"/>
+    <path d="M26 74h44"/>
+    <path d="M26 114h44"/>
+    <path d="M26 154h44"/>
+    <path d="M26 194h44"/>
+    <path d="M26 234h44"/>
+  </g>
+  <g opacity=".46" fill="#d0eef8">
+    <path d="M45 24l4 4-4 4-4-4z"/>
+    <path d="M55 64l4 4-4 4-4-4z"/>
+    <path d="M40 104l4 4-4 4-4-4z"/>
+    <path d="M53 144l4 4-4 4-4-4z"/>
+    <path d="M43 184l4 4-4 4-4-4z"/>
+    <path d="M55 224l4 4-4 4-4-4z"/>
+  </g>
+  <path d="M76 0c5 35 5 69 0 102c-4 26-4 50 0 76c4 26 4 52 0 78" fill="none" stroke="#284150" stroke-width="6" opacity=".45"/>
+</svg>
