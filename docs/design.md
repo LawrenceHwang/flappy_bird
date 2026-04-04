@@ -10,7 +10,7 @@ The game supports two modes:
 - **Infinite mode** with four fixed difficulty presets
 - **Cosmetic bird skins** with a default bird and a bee option
 
-The design goal is a game that feels cute, festive, smooth, approachable, and easy to deploy as a static site.
+The design goal is a game that feels cute, festive, smooth, approachable, premium, and easy to deploy as a static site.
 
 ## Gameplay
 
@@ -69,13 +69,21 @@ The physics are intentionally readable but less floaty than before.
 
 ### Visual style
 
-- Programmatic shapes only; no sprite dependency
-- Rounded, soft geometry with a chubby-bird silhouette
-- Bright but accessible palette with stronger highlights, outlines, and glow accents
-- Magical-kingdom parallax background with aurora bands, clouds, sparkles, hills, and ground
-- Menu scenes use a golden-ratio composition, asymmetrical focal art, and frosted-glass UI panels so the navigation flow reads as a deliberate visual hierarchy instead of a flat grid of widgets
-- Enchanted pipe styling with rune marks, ornate caps, and subtle gap glow
-- Particle effects for flap, reward pickup, and death
+- Hybrid rendering: hand-authored SVG art composited into Canvas with procedural lighting, glow, and particles
+- Rounded, soft geometry with a chubby-bird silhouette and stronger premium-material shading
+- Bright but accessible palette with deeper contrast, warmer highlights, and richer atmospheric depth
+- Magical-kingdom parallax background built from layered far, mid, front, and ground art plus sparkles, wisps, and motes
+- Menu and overlay scenes use a shared glass-panel UI kit so the navigation flow reads as one deliberate premium product instead of isolated scene-specific widgets
+- Enchanted pipe styling uses stretched pipe-body art, ornate caps, and subtle gap emphasis without changing collision contracts
+- Reward pickups and HUD indicators use the same icon set so in-game feedback and menus share one visual language
+- Particle effects remain procedural for flap, reward pickup, and death polish
+
+### Graphics system
+
+- `src/graphics/theme.ts` centralizes visual tokens such as panel surfaces, type hierarchy, button tones, and HUD colors
+- `src/graphics/ui-kit.ts` provides shared Canvas helpers for glass panels, buttons, control pills, toggles, scene titles, and the loading splash
+- `src/graphics/assets.ts` preloads shipped SVG art and exposes typed lookup helpers for bird frames and reward icons
+- `src/main.ts` blocks `game.start()` until the art pack is decoded so gameplay scenes never need ad hoc lazy-loading logic
 
 ## Audio Design
 
@@ -100,6 +108,12 @@ Audio uses the Web Audio API only.
 - `GameScene.ts` owns active gameplay state
 - `SceneManager.ts` manages transitions between menu, gameplay, completion, and game over states
 
+### Graphics Foundation
+
+- `Background.ts`, `Bird.ts`, `Pipe.ts`, and `Reward.ts` render through the shared art system while preserving their gameplay APIs and hitbox semantics
+- `HUD.ts` is the canonical in-run HUD renderer
+- Menu, pause, game-over, and level-complete scenes share common UI chrome instead of maintaining separate panel/button implementations
+
 ### Persistence
 
 - `ScoreManager.ts` stores scores in `localStorage`
@@ -110,7 +124,8 @@ Audio uses the Web Audio API only.
 - `requestAnimationFrame` loop
 - Delta-time based updates
 - Object pooling for particles and pipes
-- No runtime asset loading required for core art and sound
+- Compact SVG art is preloaded once during boot, then reused from memory throughout the session
+- Shared UI helpers reduce repeated scene-local drawing logic and keep visual changes centralized
 
 ## Deployment
 

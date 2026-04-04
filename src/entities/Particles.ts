@@ -126,6 +126,16 @@ export class ParticleEmitter {
     for (const p of this.particles) {
       if (p.life <= 0 || p.radius <= 0) continue;
 
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 2.8);
+      glow.addColorStop(0, p.color);
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+
+      ctx.globalAlpha = p.alpha * 0.45;
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius * 2.8, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.globalAlpha = p.alpha;
       ctx.fillStyle = p.color;
       ctx.beginPath();

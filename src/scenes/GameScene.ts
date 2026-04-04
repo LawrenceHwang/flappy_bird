@@ -34,6 +34,8 @@ import type {
   RewardType,
   Scene,
 } from '../utils/types';
+import { drawGlassPanel } from '../graphics/ui-kit';
+import { HUD } from '../ui/HUD';
 import { getPauseButtons, renderPauseOverlay } from './PauseScene';
 
 /* ------------------------------------------------------------------ */
@@ -74,20 +76,6 @@ function rewardDuration(type: RewardType): number {
   }
 }
 
-const REWARD_ICONS: Record<RewardType, string> = {
-  multiplier: '×2',
-  shield: '🛡️',
-  slowmo: '⏳',
-  shrink: '🔽',
-};
-
-const REWARD_COLORS: Record<RewardType, string> = {
-  multiplier: COLORS.reward.multiplier,
-  shield: COLORS.reward.shield,
-  slowmo: COLORS.reward.slowmo,
-  shrink: COLORS.reward.shrink,
-};
-
 /* ------------------------------------------------------------------ */
 /*  GameScene                                                          */
 /* ------------------------------------------------------------------ */
@@ -113,6 +101,7 @@ export class GameScene implements Scene {
   private background!: Background;
   private particles!: ParticleEmitter;
   private rewardManager: RewardManager | null = null;
+  private hud: HUD = new HUD();
 
   // State
   private state: GameState = 'ready';
@@ -144,6 +133,7 @@ export class GameScene implements Scene {
   private onMouseMove: ((e: MouseEvent) => void) | null = null;
   private onMouseClick: ((e: MouseEvent) => void) | null = null;
   private onTouchStart: ((e: TouchEvent) => void) | null = null;
+  private onKeyDown: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(
     mode: GameMode,
@@ -194,6 +184,7 @@ export class GameScene implements Scene {
     this.gameTime = 0;
     this.countdownRemaining = 0;
     this.pauseSelectedIndex = 0;
+    this.hud = new HUD();
 
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
     this.registerListeners();
@@ -408,7 +399,9 @@ export class GameScene implements Scene {
     this.renderGround(ctx);
 
     // HUD
-    this.renderHUD(ctx);
+    if (!this.isOverlayActive()) {
+      this.renderHUD(ctx);
+    }
 
     // Overlay states
     if (this.state === 'ready') {
@@ -456,12 +449,18 @@ export class GameScene implements Scene {
   }
 
   private handlePauseInput(action: InputAction): void {
-    if (action === 'pause' || action === 'flap') {
-      // Resume when pressing pause or flap while paused
+    if (action === 'pause') {
+      this.resume();
+      return;
+    }
+
+    if (action === 'confirm' || action === 'flap') {
       if (this.pauseSelectedIndex === 0) {
         this.resume();
       } else if (this.pauseSelectedIndex === 1) {
         this.onGameOver(this.score);
+      } else {
+        AudioManager.getInstance().muted = !AudioManager.getInstance().muted;
       }
     }
   }
@@ -536,90 +535,14 @@ export class GameScene implements Scene {
   /* ================================================================ */
 
   private renderHUD(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
-
-    // Score (top-centre)
-    ctx.font = 'bold 36px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillText(`${this.score}`, GAME_WIDTH / 2 + 2, 17);
-    ctx.fillStyle = COLORS.ui.text;
-    ctx.fillText(`${this.score}`, GAME_WIDTH / 2, 15);
-
-    // Story-mode timer
-    if (this.mode === 'story' && this.state === 'playing') {
-      const secs = Math.max(0, Math.ceil(this.timer));
-      const mins = Math.floor(secs / 60);
-      const rem = secs % 60;
-      const timerText = `${mins}:${rem.toString().padStart(2, '0')}`;
-      const timerColor = this.timer < 10 ? '#E17055' : COLORS.ui.text;
-
-      ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillStyle = timerColor;
-      ctx.fillText(timerText, GAME_WIDTH - 20, 18);
-
-      // Level indicator
-      if (this.levelConfig) {
-        ctx.font = '14px "Segoe UI", system-ui, sans-serif';
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = COLORS.ui.text;
-        ctx.fillText(`Level ${this.levelConfig.level}`, GAME_WIDTH - 20, 46);
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    // Active power-up indicators
-    if (this.activeRewards.length > 0) {
-      this.renderRewardIndicators(ctx);
-    }
-
-    // Multiplier badge
-    if (this.scoreMultiplier > 1) {
-      ctx.font = 'bold 18px "Segoe UI", system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = COLORS.reward.multiplier;
-      ctx.fillText(`×${this.scoreMultiplier}`, GAME_WIDTH / 2, 55);
-    }
-
-    ctx.restore();
-  }
-
-  private renderRewardIndicators(ctx: CanvasRenderingContext2D): void {
-    const startX = 15;
-    const y = 18;
-    const size = 30;
-    const gap = 6;
-
-    this.activeRewards.forEach((reward, i) => {
-      const x = startX + i * (size + gap);
-
-      // Background pill
-      ctx.fillStyle = REWARD_COLORS[reward.type];
-      ctx.globalAlpha = 0.3;
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Icon
-      ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = REWARD_COLORS[reward.type];
-      ctx.fillText(REWARD_ICONS[reward.type], x + size / 2, y + size / 2);
-
-      // Remaining time (skip for infinite duration shields)
-      if (reward.remaining !== Infinity) {
-        ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-        ctx.fillStyle = COLORS.ui.text;
-        ctx.fillText(
-          `${Math.ceil(reward.remaining)}s`,
-          x + size / 2,
-          y + size + 6,
-        );
-      }
+    this.hud.render(ctx, {
+      score: this.score,
+      mode: this.mode,
+      timer: this.mode === 'story' && this.state === 'playing' ? Math.max(0, this.timer) : undefined,
+      level: this.levelConfig?.level,
+      activeRewards: this.activeRewards,
+      paused: false,
+      scoreMultiplier: this.scoreMultiplier,
     });
   }
 
@@ -638,64 +561,86 @@ export class GameScene implements Scene {
   }
 
   private renderReadyOverlay(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
-    ctx.font = 'bold 30px "Segoe UI", system-ui, sans-serif';
+    const panel = { x: GAME_WIDTH / 2 - 174, y: GAME_HEIGHT / 2 - 46, w: 348, h: 96 };
+    drawGlassPanel(ctx, panel, { accent: 'rgba(96, 116, 255, 0.12)' });
+
+    ctx.font = '700 28px Georgia, Cambria, "Times New Roman", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillText('Ready?', GAME_WIDTH / 2 + 2, GAME_HEIGHT / 2 - 12 + 2);
     ctx.fillStyle = COLORS.ui.text;
-    ctx.fillText('Ready?', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 12);
+    ctx.fillText('Ready for Takeoff?', GAME_WIDTH / 2, panel.y + 34);
 
-    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-    ctx.fillText('Space / Enter / Click / Tap', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
-
-    ctx.globalAlpha = 0.78;
-    ctx.font = '13px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText('Starts with a 3-2-1 countdown', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 44);
-    ctx.globalAlpha = 1;
-    ctx.restore();
+    ctx.font = '600 14px "Trebuchet MS", "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255, 245, 230, 0.9)';
+    ctx.fillText('Press Space, Enter, click, or tap to launch', GAME_WIDTH / 2, panel.y + 64);
   }
 
   private renderCountdownOverlay(ctx: CanvasRenderingContext2D): void {
     const count = Math.max(1, Math.ceil(this.countdownRemaining));
+    const panel = { x: GAME_WIDTH / 2 - 88, y: GAME_HEIGHT / 2 - 92, w: 176, h: 176 };
+    drawGlassPanel(ctx, panel, { accent: 'rgba(245, 206, 117, 0.12)' });
 
-    ctx.save();
-    ctx.font = 'bold 72px "Segoe UI", system-ui, sans-serif';
+    ctx.font = '700 82px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-    ctx.fillText(`${count}`, GAME_WIDTH / 2 + 3, GAME_HEIGHT / 2 - 6 + 3);
     ctx.fillStyle = COLORS.ui.text;
-    ctx.fillText(`${count}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 6);
+    ctx.fillText(`${count}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
 
-    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
-    ctx.globalAlpha = 0.88;
-    ctx.fillText('Get ready', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 42);
-    ctx.restore();
+    ctx.font = '600 14px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255, 239, 214, 0.74)';
+    ctx.fillText('Get ready', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 48);
   }
 
   private renderDeadOverlay(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    ctx.font = 'bold 24px "Segoe UI", system-ui, sans-serif';
+    const panel = {
+      x: GAME_WIDTH / 2 - 154,
+      y: GAME_HEIGHT - GROUND_HEIGHT - 54,
+      w: 308,
+      h: 40,
+    };
+    drawGlassPanel(ctx, panel, {
+      radius: 20,
+      accent: 'rgba(255, 177, 140, 0.12)',
+    });
+
+    ctx.font = '700 14px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.ui.text;
-    ctx.globalAlpha = 0.7 + 0.3 * Math.sin(Date.now() / 400);
-    ctx.fillText('Tap to continue', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
-    ctx.restore();
+    ctx.globalAlpha = 0.72 + 0.28 * Math.sin(Date.now() / 400);
+    ctx.fillText('Tap, click, or press Enter to continue', GAME_WIDTH / 2, panel.y + panel.h / 2);
+    ctx.globalAlpha = 1;
+  }
+
+  private isOverlayActive(): boolean {
+    return this.paused || this.state === 'ready' || this.state === 'countdown' || this.state === 'dead';
   }
 
   private renderGround(ctx: CanvasRenderingContext2D): void {
     const y = GAME_HEIGHT - GROUND_HEIGHT;
-    ctx.fillStyle = COLORS.ground.grass;
-    ctx.fillRect(0, y, GAME_WIDTH, 8);
-    ctx.fillStyle = COLORS.ground.surface;
-    ctx.fillRect(0, y + 8, GAME_WIDTH, GROUND_HEIGHT - 8);
+    const glow = ctx.createLinearGradient(0, y, 0, y + 18);
+    glow.addColorStop(0, 'rgba(150, 237, 177, 0.4)');
+    glow.addColorStop(1, 'rgba(150, 237, 177, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, y - 4, GAME_WIDTH, 18);
+
+    ctx.fillStyle = 'rgba(49, 124, 67, 0.55)';
+    ctx.fillRect(0, y + 2, GAME_WIDTH, 10);
+
+    for (let i = 0; i < 32; i++) {
+      const bladeX = i * (GAME_WIDTH / 31);
+      const sway = Math.sin(this.gameTime * 2.2 + bladeX * 0.04) * 3;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(116, 224, 137, 0.75)' : 'rgba(66, 182, 103, 0.72)';
+      ctx.beginPath();
+      ctx.moveTo(bladeX - 2, y + 4);
+      ctx.lineTo(bladeX + sway, y - 10 - (i % 3));
+      ctx.lineTo(bladeX + 2, y + 4);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   /* ================================================================ */
@@ -758,18 +703,39 @@ export class GameScene implements Scene {
       this.handleFlap();
     };
 
+    this.onKeyDown = (e: KeyboardEvent) => {
+      if (!this.paused) return;
+
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          e.preventDefault();
+          this.pauseSelectedIndex = (this.pauseSelectedIndex + 2) % 3;
+          break;
+        case 'ArrowDown':
+        case 'ArrowRight':
+        case 'Tab':
+          e.preventDefault();
+          this.pauseSelectedIndex = (this.pauseSelectedIndex + 1) % 3;
+          break;
+      }
+    };
+
     this.canvas.addEventListener('mousemove', this.onMouseMove);
     this.canvas.addEventListener('click', this.onMouseClick);
     this.canvas.addEventListener('touchstart', this.onTouchStart, { passive: false });
+    document.addEventListener('keydown', this.onKeyDown);
   }
 
   private unregisterListeners(): void {
     if (this.canvas && this.onMouseMove) this.canvas.removeEventListener('mousemove', this.onMouseMove);
     if (this.canvas && this.onMouseClick) this.canvas.removeEventListener('click', this.onMouseClick);
     if (this.canvas && this.onTouchStart) this.canvas.removeEventListener('touchstart', this.onTouchStart);
+    if (this.onKeyDown) document.removeEventListener('keydown', this.onKeyDown);
 
     this.onMouseMove = null;
     this.onMouseClick = null;
     this.onTouchStart = null;
+    this.onKeyDown = null;
   }
 }

@@ -3,10 +3,13 @@ import { COLORS } from '../utils/colors';
 import { GAME_WIDTH, GAME_HEIGHT } from '../utils/constants';
 import { clamp, easeOutCubic } from '../utils/math';
 import { ParticleEmitter } from '../entities/Particles';
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
+import { GRAPHICS_THEME } from '../graphics/theme';
+import {
+  drawButton,
+  drawGlassPanel,
+  drawSceneTitle,
+  roundedRectPath,
+} from '../graphics/ui-kit';
 
 interface ButtonRect {
   x: number;
@@ -31,39 +34,8 @@ function toCanvasCoords(
   };
 }
 
-function roundedRectPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-/* ------------------------------------------------------------------ */
-/*  LevelCompleteScene                                                 */
-/* ------------------------------------------------------------------ */
-
 const MAX_LEVEL = 20;
 
-/**
- * Celebration screen shown after completing a story-mode level.
- *
- * Displays an animated star, score, particles, and navigation buttons.
- * Level 20 triggers a special victory message.
- */
 export class LevelCompleteScene implements Scene {
   private readonly level: number;
   private readonly score: number;
@@ -72,8 +44,6 @@ export class LevelCompleteScene implements Scene {
 
   private selectedIndex = 0;
   private elapsed = 0;
-
-  /** Animated score counter. */
   private displayScore = 0;
   private scoreAnimDone = false;
 
@@ -83,7 +53,6 @@ export class LevelCompleteScene implements Scene {
   private readonly primaryButton: ButtonRect;
   private readonly menuButton: ButtonRect;
 
-  // Mouse state
   private mouseX = -1;
   private mouseY = -1;
   private canvas: HTMLCanvasElement | null = null;
@@ -105,20 +74,17 @@ export class LevelCompleteScene implements Scene {
     this.onMenu = onMenu;
     this.isVictory = level >= MAX_LEVEL;
 
-    const btnW = 180;
-    const btnH = 50;
+    const btnW = 198;
+    const btnH = 52;
     const gap = 20;
     const totalW = btnW * 2 + gap;
     const startX = GAME_WIDTH / 2 - totalW / 2;
-    const btnY = 310;
+    const btnY = 318;
 
     this.primaryButton = { x: startX, y: btnY, w: btnW, h: btnH };
     this.menuButton = { x: startX + btnW + gap, y: btnY, w: btnW, h: btnH };
   }
 
-  /* -------- lifecycle -------- */
-
-  /** Register listeners. */
   enter(): void {
     this.elapsed = 0;
     this.displayScore = 0;
@@ -126,7 +92,6 @@ export class LevelCompleteScene implements Scene {
     this.selectedIndex = 0;
     this.mouseX = -1;
     this.mouseY = -1;
-
     this.particles = new ParticleEmitter();
 
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
@@ -183,7 +148,6 @@ export class LevelCompleteScene implements Scene {
     this.canvas.addEventListener('touchstart', this.onTouchStart, { passive: false });
   }
 
-  /** Remove listeners. */
   exit(): void {
     if (this.canvas && this.onMouseMove) this.canvas.removeEventListener('mousemove', this.onMouseMove);
     if (this.canvas && this.onMouseClick) this.canvas.removeEventListener('click', this.onMouseClick);
@@ -196,14 +160,12 @@ export class LevelCompleteScene implements Scene {
     this.onTouchStart = null;
   }
 
-  /** Flap / confirm → next level. */
   handleInput(action: InputAction): void {
     if (action === 'flap' || action === 'confirm') {
       this.activateSelected();
     }
   }
 
-  /** Tick score animation and particles. */
   update(dt: number): void {
     this.elapsed += dt;
 
@@ -216,7 +178,6 @@ export class LevelCompleteScene implements Scene {
       }
     }
 
-    // Periodic celebration particles
     if (this.particles && this.elapsed % 0.3 < dt) {
       const px = GAME_WIDTH / 2 + (Math.random() - 0.5) * 300;
       const py = 80 + Math.random() * 60;
@@ -226,191 +187,99 @@ export class LevelCompleteScene implements Scene {
     this.particles?.update(dt);
   }
 
-  /** Draw the level-complete / victory panel. */
   render(ctx: CanvasRenderingContext2D): void {
-    // Dim backdrop
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    const panel = { x: GAME_WIDTH / 2 - 228, y: GAME_HEIGHT / 2 - 162, w: 456, h: 324 };
+
+    ctx.fillStyle = 'rgba(6, 9, 22, 0.7)';
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Panel
-    const panelW = 440;
-    const panelH = 310;
-    const panelX = GAME_WIDTH / 2 - panelW / 2;
-    const panelY = GAME_HEIGHT / 2 - panelH / 2 - 10;
+    drawGlassPanel(ctx, panel, {
+      accent: this.isVictory ? 'rgba(245, 206, 117, 0.18)' : 'rgba(74, 223, 186, 0.14)',
+    });
 
-    ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 24;
-    roundedRectPath(ctx, panelX, panelY, panelW, panelH, 20);
-    ctx.fillStyle = COLORS.ui.background;
-    ctx.fill();
-    ctx.restore();
+    drawSceneTitle(ctx, {
+      x: GAME_WIDTH / 2,
+      y: panel.y + 54,
+      title: this.isVictory ? 'Victory!' : `Level ${this.level} Complete`,
+      width: this.isVictory ? 250 : 340,
+    });
 
-    // Animated star
-    this.renderStar(ctx, GAME_WIDTH / 2, panelY - 10);
+    this.renderScoreCard(ctx, panel.y + 112);
+    this.renderInfoChip(ctx, panel.y + 228);
 
-    if (this.isVictory) {
-      this.renderVictory(ctx, panelY);
-    } else {
-      this.renderLevelComplete(ctx, panelY);
-    }
+    drawButton(ctx, this.primaryButton, {
+      label: this.isVictory ? 'Play Again' : 'Next Level',
+      leadingIcon: this.isVictory ? '★' : '➜',
+      tone: this.isVictory ? 'gold' : 'emerald',
+      hovered: pointInRect(this.mouseX, this.mouseY, this.primaryButton),
+      selected: this.selectedIndex === 0,
+    });
+    drawButton(ctx, this.menuButton, {
+      label: 'Back to Menu',
+      leadingIcon: '⌂',
+      tone: 'slate',
+      hovered: pointInRect(this.mouseX, this.mouseY, this.menuButton),
+      selected: this.selectedIndex === 1,
+    });
 
-    // Score
-    ctx.save();
-    ctx.font = '16px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = COLORS.ui.text;
-    ctx.globalAlpha = 0.6;
-    ctx.fillText('SCORE', GAME_WIDTH / 2, panelY + 120);
-    ctx.restore();
-
-    ctx.save();
-    ctx.font = 'bold 48px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.ui.text;
-    ctx.fillText(`${this.displayScore}`, GAME_WIDTH / 2, panelY + 155);
-    ctx.restore();
-
-    // Level indicator
-    ctx.save();
-    ctx.font = '14px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = COLORS.ui.text;
-    ctx.globalAlpha = 0.5;
-    ctx.fillText(`Level ${this.level} of ${MAX_LEVEL}`, GAME_WIDTH / 2, panelY + 195);
-    ctx.restore();
-
-    // Buttons
-    const primaryLabel = this.isVictory ? '🏆 Play Again' : '▶ Next Level';
-    const primaryColors: [string, string] = this.isVictory
-      ? ['#FDCB6E', '#F8A500']
-      : ['#00B894', '#55E6C1'];
-    const primaryText = this.isVictory ? COLORS.ui.textDark : COLORS.ui.text;
-
-    this.renderButton(ctx, this.primaryButton, primaryLabel, primaryColors, 0, primaryText);
-    this.renderButton(ctx, this.menuButton, '🏠 Menu', ['#636E72', '#B2BEC3'], 1, COLORS.ui.text);
-
-    // Particles
     this.particles?.render(ctx);
   }
 
-  /* -------- private rendering -------- */
-
-  private renderLevelComplete(ctx: CanvasRenderingContext2D, panelY: number): void {
-    ctx.save();
-    ctx.font = 'bold 36px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const grad = ctx.createLinearGradient(
-      GAME_WIDTH / 2 - 120, panelY + 50,
-      GAME_WIDTH / 2 + 120, panelY + 50,
-    );
-    grad.addColorStop(0, '#00B894');
-    grad.addColorStop(1, '#55E6C1');
-    ctx.fillStyle = grad;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 6;
-    ctx.fillText(`Level ${this.level} Complete!`, GAME_WIDTH / 2, panelY + 55);
-    ctx.restore();
-  }
-
-  private renderVictory(ctx: CanvasRenderingContext2D, panelY: number): void {
-    ctx.save();
-    ctx.font = 'bold 32px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const grad = ctx.createLinearGradient(
-      GAME_WIDTH / 2 - 150, panelY + 45,
-      GAME_WIDTH / 2 + 150, panelY + 45,
-    );
-    grad.addColorStop(0, '#FDCB6E');
-    grad.addColorStop(0.5, '#F8A500');
-    grad.addColorStop(1, '#FDCB6E');
-    ctx.fillStyle = grad;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 6;
-    ctx.fillText('🎉 Victory! 🎉', GAME_WIDTH / 2, panelY + 45);
-    ctx.restore();
+  private renderScoreCard(ctx: CanvasRenderingContext2D, topY: number): void {
+    const x = GAME_WIDTH / 2 - 96;
+    const y = topY;
+    const w = 192;
+    const h = 96;
 
     ctx.save();
-    ctx.font = '18px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = COLORS.ui.text;
-    ctx.globalAlpha = 0.8;
-    ctx.fillText("You've Mastered Flappy Bird!", GAME_WIDTH / 2, panelY + 80);
-    ctx.restore();
-  }
-
-  /** Draw an animated rotating star above the panel. */
-  private renderStar(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
-    const scale = 0.8 + 0.2 * Math.sin(this.elapsed * 3);
-    const rotation = this.elapsed * 0.5;
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotation);
-    ctx.scale(scale, scale);
-
-    ctx.fillStyle = '#FDCB6E';
-    ctx.shadowColor = 'rgba(253, 203, 110, 0.6)';
-    ctx.shadowBlur = 16;
-
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-      const method = i === 0 ? 'moveTo' : 'lineTo';
-      ctx[method](Math.cos(angle) * 22, Math.sin(angle) * 22);
-    }
-    ctx.closePath();
+    roundedRectPath(ctx, x, y, w, h, 22);
+    const fill = ctx.createLinearGradient(x, y, x, y + h);
+    fill.addColorStop(0, GRAPHICS_THEME.surface.chipTop);
+    fill.addColorStop(1, GRAPHICS_THEME.surface.chipBottom);
+    ctx.fillStyle = fill;
     ctx.fill();
+    ctx.strokeStyle = GRAPHICS_THEME.hud.badgeStroke;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
 
+    ctx.fillStyle = GRAPHICS_THEME.text.muted;
+    ctx.font = GRAPHICS_THEME.fonts.label;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('SCORE', GAME_WIDTH / 2, y + 14);
+
+    const grad = ctx.createLinearGradient(x + 16, y + 30, x + w - 16, y + h);
+    grad.addColorStop(0, '#fffef4');
+    grad.addColorStop(0.4, '#fff0cb');
+    grad.addColorStop(1, '#ffe39f');
+    ctx.fillStyle = grad;
+    ctx.font = '700 44px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${this.displayScore}`, GAME_WIDTH / 2, y + 58);
     ctx.restore();
   }
 
-  private renderButton(
-    ctx: CanvasRenderingContext2D,
-    btn: ButtonRect,
-    label: string,
-    colors: [string, string],
-    index: number,
-    textColor: string,
-  ): void {
-    const hovered = pointInRect(this.mouseX, this.mouseY, btn);
-    const highlight = hovered || this.selectedIndex === index;
+  private renderInfoChip(ctx: CanvasRenderingContext2D, y: number): void {
+    const text = this.isVictory ? `Story Complete • ${MAX_LEVEL}/${MAX_LEVEL}` : `Story • Level ${this.level} of ${MAX_LEVEL}`;
 
     ctx.save();
-    if (highlight) {
-      ctx.shadowColor = colors[0];
-      ctx.shadowBlur = 16;
-    }
+    ctx.font = '600 12px "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
+    const width = Math.max(206, Math.min(320, ctx.measureText(text).width + 34));
+    const rect = { x: GAME_WIDTH / 2 - width / 2, y, w: width, h: 30 };
 
-    const grad = ctx.createLinearGradient(btn.x, btn.y, btn.x + btn.w, btn.y + btn.h);
-    grad.addColorStop(0, colors[highlight ? 1 : 0]);
-    grad.addColorStop(1, colors[highlight ? 0 : 1]);
-
-    roundedRectPath(ctx, btn.x, btn.y, btn.w, btn.h, 12);
-    ctx.fillStyle = grad;
+    roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, 15);
+    ctx.fillStyle = this.isVictory ? 'rgba(245, 206, 117, 0.16)' : 'rgba(74, 223, 186, 0.12)';
     ctx.fill();
+    ctx.strokeStyle = this.isVictory ? 'rgba(245, 206, 117, 0.28)' : 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    if (this.selectedIndex === index) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = textColor;
-    ctx.font = 'bold 20px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = GRAPHICS_THEME.text.secondary;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
+    ctx.fillText(text, GAME_WIDTH / 2, rect.y + rect.h / 2);
     ctx.restore();
   }
-
-  /* -------- actions -------- */
 
   private activatePrimary(): void {
     this.onNextLevel();

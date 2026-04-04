@@ -1,56 +1,74 @@
-# Flappy Bird – Development Progress
+# Flappy Bird - Development Progress
 
-## Original Prompt
-
-The user asked to fix misaligned elements in the entire menu window of the Flappy Bird game, to plan carefully, and make it world-class quality.
+Original prompt: The user requested a world-class graphics refactor on a new branch. After the first premium pass, the user reported that too much text overlapped focal art or was positioned poorly, and asked for pro game-dev and art-direction cleanup.
 
 ## Current Status
 
-Menu alignment overhaul in progress.
+Premium graphics overhaul is complete on `refactor/premium-graphics-overhaul`.
+The follow-up layout cleanup pass is implemented and verified with
+`npm run build`. The remaining step is to commit this layout-cleanup
+follow-up on the same branch.
 
-## Design Decisions
+## Current Focus
 
-The menu uses a **two-column layout**: bird on the left, action panel on the right. The canvas is **800×450** with the ground occupying the bottom 50px. All UI elements are positioned using a centralized `createMenuLayout()` function.
+- Commit the text/layout cleanup follow-up.
 
-### Key Alignment Issues (5)
+## Key Decisions
 
-1. **Bird not vertically centered with action panel** — bird center y=226 vs panel center y=242.
-2. **Skin controls disconnected from bird** — 72px gap between bird and controls.
-3. **Header elements at inconsistent vertical positions** — title, score chip, and sound toggle misaligned.
-4. **Panel internal spacing cramped at bottom** — only 12px padding.
-5. **Overall vertical distribution top-heavy.**
+- Use a **three-zone rule** on player-facing screens: headline, focus,
+  action/support.
+- Remove or merge copy instead of shrinking text everywhere.
+- Keep helper and metadata copy inside its owning panel instead of
+  floating near focal art.
+- Suppress the gameplay HUD while center overlays are active.
+- Keep the simplified pause sound control reachable by keyboard, mouse,
+  and touch.
 
-### Solution
+## Completed In This Pass
 
-Rebalance all positions using a **content-center-line approach** (y=240):
-
-| Element | Before | After | Change |
-|---|---|---|---|
-| Panel height | 272px | 280px | +8px |
-| Panel y | 106 | 100 | −6px |
-| Bird center y | 226 | 232 | +6px (8px above panel center for visual weight) |
-| Score chip y | 34 | 16 | −18px (more header breathing room) |
-| Title y | 54 | 50 | −4px |
-| Skin button y | 298 | 294 | −4px |
-| Skin hint y | 350 | 340 | −10px |
-| Control pills bottom offset | panelH−44 | panelH−48 | +4px padding |
-
-## Implementation Notes
-
-- All changes are in `src/scenes/MenuScene.ts` — specifically in `createMenuLayout()` and `renderHighScore()`.
-- The layout is fully parametric — all positions derive from the layout object.
-- No external dependencies or new files needed.
+- **MenuScene**
+  - Moved high-score information into an anchored footer summary.
+  - Removed the external skin hint and made the skin control
+    self-contained.
+  - Replaced the dense footer helper cluster with one compact support
+    zone.
+- **DifficultySelectScene**
+  - Simplified the reward legend into compact chips.
+  - Removed extra section-label noise.
+  - Anchored Back/help content into a shared footer treatment.
+  - Reduced difficulty-card copy density.
+- **GameScene overlays**
+  - Hid the HUD while ready/countdown/dead/pause overlays are active.
+  - Reduced the ready overlay to headline plus one CTA line.
+  - Moved the death prompt into a bottom-safe footer chip.
+- **PauseScene**
+  - Simplified the pause panel copy.
+  - Made the sound control self-contained.
+- **GameOverScene / LevelCompleteScene**
+  - Reduced end-state screens to title -> score/info -> actions.
+  - Standardized the secondary CTA to `Back to Menu`.
+- **Pause input follow-up**
+  - Restored keyboard navigation/activation for the third pause control
+    after the layout cleanup changed the pause UI.
+- **Verification**
+  - `npm run build` passes after the layout cleanup and pause-input fix.
 
 ## What Works
 
-- Two-column asymmetric layout with bird hero and frosted-glass action panel.
-- Mouse, keyboard, and touch input for all menu interactions.
-- Scene transitions with fade effects.
-- Sound toggle and skin switching.
-- High score display.
+- Cleaner visual hierarchy across menu, difficulty select, pause, game
+  over, level complete, and gameplay overlays.
+- Reduced copy clutter without undoing the premium art direction.
+- Input targets remain intact, including the updated pause sound control.
+
+## Remaining Risks / Re-test
+
+- A final browser-based visual QA pass on target devices is still worth
+  doing for font rendering and overall balance.
+- Keep an eye on long score values in end-state score cards if scoring
+  range expands later.
 
 ## TODOs / Suggestions
 
-- [ ] Consider adding subtle entrance animations for menu elements.
-- [ ] Could add hover micro-interactions on the bird.
-- [ ] Difficulty select scene may benefit from similar alignment audit.
+- [ ] Commit the layout-cleanup follow-up.
+- [ ] If more polish is needed, prefer motion/transition refinement
+  before reintroducing any extra text.
